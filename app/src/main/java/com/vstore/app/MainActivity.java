@@ -57,8 +57,8 @@ public class MainActivity extends Activity {
         root.addView(top);
         
         LinearLayout banner=new LinearLayout(this);banner.setOrientation(1);banner.setPadding(15,12,15,12);banner.setBackground(round(0x1affffff,24));LinearLayout.LayoutParams bp=new LinearLayout.LayoutParams(-1,-2);bp.setMargins(0,12,0,10);root.addView(banner,bp);
-        banner.addView(label("✈",28,lavender));banner.addView(label("Telegram // @Money_fun",16,text));banner.addView(label("Новости, обновления модов и плагины",13,muted));
-        TextView telegram=label("Открыть Telegram-канал  ↗",13,lavender);banner.addView(telegram);telegram.setOnClickListener(v->openUrl("https://t.me/Money_fun"));
+        banner.addView(label("✈",28,lavender));banner.addView(label("Канал в Telegram // VGRAM INSIDER",16,text));banner.addView(label("Новости, обновления модов и плагины: @margymods",13,muted));
+        TextView telegram=label("Открыть Telegram-канал  ↗",13,lavender);banner.addView(telegram);telegram.setOnClickListener(v->openUrl("https://t.me/margymods"));
         TextView importApk=label("＋ Импортировать APK",14,lavender);importApk.setPadding(4,10,4,10);root.addView(importApk);importApk.setOnClickListener(v->{Intent pick=new Intent(Intent.ACTION_OPEN_DOCUMENT);pick.setType("application/vnd.android.package-archive");pick.addCategory(Intent.CATEGORY_OPENABLE);startActivityForResult(pick,PICK_APK);});
         tabs=new LinearLayout(this);tabs.setOrientation(0);HorizontalScrollView hsv=new HorizontalScrollView(this);hsv.setHorizontalScrollBarEnabled(false);hsv.addView(tabs);root.addView(hsv);
         search=new EditText(this);search.setSingleLine(true);search.setHint("Поиск модов и приложений...");search.setTextColor(text);search.setHintTextColor(muted);search.setPadding(18,12,18,12);search.setBackground(round(0x1affffff,28));root.addView(search);
