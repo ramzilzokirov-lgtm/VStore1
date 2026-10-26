@@ -94,7 +94,22 @@ public class MainActivity extends Activity {
     private GradientDrawable round(int color,int radius){GradientDrawable d=new GradientDrawable();d.setColor(color);d.setCornerRadius(radius);d.setStroke(1,0x40ffffff);return d;}
     private TextView label(String s,int size,int color){TextView t=new TextView(this);t.setText(s);t.setTextSize(size);t.setTextColor(color);t.setPadding(0,3,0,3);return t;}
     private void loadCached(){String raw=getPreferences(0).getString("catalog_json","");if(!raw.isEmpty())try{applyCatalog(new JSONObject(raw),false);}catch(Exception ignored){}}
-    private void loadCatalog(boolean force){status.setText("Обновление каталога…");pool.execute(()->{try{HttpURLConnection c=(HttpURLConnection)new URL(CATALOG_URL+(force?"?v="+System.currentTimeMillis():"")).openConnection();c.setConnectTimeout(8000);c.setReadTimeout(12000);c.setUseCaches(!force);String raw=readText(c.getInputStream());JSONObject json=new JSONObject(raw);getPreferences(0).edit().putString("catalog_json",raw).apply();runOnUiThread(()->applyCatalog(json,true));}catch(Exception e){runOnUiThread(()->{status.setText("Показан кэш • сервер каталога недоступен");render();});}});}
+    private void loadCatalog(boolean force){
+        status.setText("Обновление каталога…");
+        pool.execute(()->{
+            try {
+                HttpURLConnection conn=(HttpURLConnection)new URL(API+"/api/apps"+(force?"?v="+System.currentTimeMillis():"")).openConnection();
+                conn.setConnectTimeout(7000);conn.setReadTimeout(12000);conn.setUseCaches(!force);
+                String raw=readText(conn.getInputStream());JSONArray remote=new JSONArray(raw);JSONObject json=new JSONObject();JSONArray normalized=new JSONArray();
+                for(int i=0;i<remote.length();i++){JSONObject src=remote.optJSONObject(i);if(src==null)continue;JSONObject item=new JSONObject();
+                    item.put("id",src.optString("id"));item.put("name",src.optString("name","Приложение"));item.put("category","Apps");item.put("version",src.optString("version_name",""));item.put("description",src.optString("description",""));item.put("package_name",src.optString("package_name",""));item.put("sha256",src.optString("sha256",""));item.put("download_url",API+src.optString("download_url",""));item.put("creator_id",src.optString("creator_id",""));normalized.put(item);}
+                json.put("apps",normalized);String cached=json.toString();getPreferences(0).edit().putString("catalog_json",cached).apply();runOnUiThread(()->applyCatalog(json,true));
+            }catch(Exception apiError){
+                try{HttpURLConnection conn=(HttpURLConnection)new URL(CATALOG_URL+(force?"?v="+System.currentTimeMillis():"")).openConnection();conn.setConnectTimeout(8000);conn.setReadTimeout(12000);conn.setUseCaches(!force);String raw=readText(conn.getInputStream());JSONObject json=new JSONObject(raw);getPreferences(0).edit().putString("catalog_json",raw).apply();runOnUiThread(()->{status.setText("Каталог GitHub • серверный каталог недоступен");applyCatalog(json,true);});}
+                catch(Exception fallbackError){runOnUiThread(()->{status.setText("Показан кэш • сервер и GitHub недоступны");render();});}
+            }
+        });
+    }
     private void applyCatalog(JSONObject json,boolean fresh){JSONArray a=json.optJSONArray("apps");if(a==null)return;synchronized(apps){apps.clear();for(int i=0;i<a.length();i++)apps.add(a.optJSONObject(i));}runOnUiThread(()->{status.setText(fresh?"Каталог обновлён":"Кэш каталога");render();});}
     private void render(){if(list==null)return;list.removeAllViews();String q=search.getText().toString().toLowerCase(Locale.ROOT);ArrayList<JSONObject> snapshot; synchronized(apps){snapshot=new ArrayList<>(apps);}
         int count=0;for(JSONObject a:snapshot){String category=a.optString("category","Apps");if(activeTab.equals("Плагины & Моды")&&!category.toLowerCase(Locale.ROOT).matches(".*(plugin|mod|плагин|мод).*"))continue;if(activeTab.equals("Эксклюзив")&&!a.optBoolean("exclusive",false))continue;if(activeTab.equals("Мои приложения")&&!a.optString("creator_id","8436409687").equals("8436409687"))continue;
