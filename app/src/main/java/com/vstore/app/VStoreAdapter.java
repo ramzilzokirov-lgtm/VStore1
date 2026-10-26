@@ -32,8 +32,10 @@ public final class VStoreAdapter extends ListAdapter<VStoreAppItem,VStoreAdapter
 
     @NonNull @Override public Holder onCreateViewHolder(@NonNull ViewGroup parent,int type) {
         MaterialCardView card=new MaterialCardView(context);
-        card.setRadius(dp(24)); card.setCardElevation(dp(2)); card.setStrokeWidth(dp(1));
-        card.setStrokeColor(0x33ffffff); card.setCardBackgroundColor(0x1affffff);
+        boolean glass=context.getSharedPreferences("vstore_ui",Context.MODE_PRIVATE).getBoolean("glass",true);
+        boolean compact=context.getSharedPreferences("vstore_ui",Context.MODE_PRIVATE).getBoolean("compact",false);
+        card.setRadius(dp(24)); card.setCardElevation(glass?dp(2):0); card.setStrokeWidth(glass?dp(1):0);
+        card.setStrokeColor(0x33ffffff); card.setCardBackgroundColor(glass?0x1affffff:0xff201d2a);
         RecyclerView.LayoutParams cp=new RecyclerView.LayoutParams(-1,-2);
         cp.setMargins(0,dp(7),0,dp(7)); card.setLayoutParams(cp);
         LinearLayout body=new LinearLayout(context); body.setOrientation(LinearLayout.VERTICAL); body.setPadding(dp(15),dp(13),dp(15),dp(13)); card.addView(body);
@@ -48,7 +50,8 @@ public final class VStoreAdapter extends ListAdapter<VStoreAppItem,VStoreAdapter
         TextView version=label("",11,textColor);version.setPadding(dp(8),dp(3),dp(8),dp(3));
         GradientDrawable chip=new GradientDrawable();chip.setColor(0x26ffffff);chip.setCornerRadius(dp(12));version.setBackground(chip);titleRow.addView(version);
         TextView description=label("",13,textColor);description.setMaxLines(2);description.setEllipsize(android.text.TextUtils.TruncateAt.END);
-        LinearLayout.LayoutParams descParams=new LinearLayout.LayoutParams(-1,-2);descParams.topMargin=dp(9);body.addView(description,descParams);
+        LinearLayout.LayoutParams descParams=new LinearLayout.LayoutParams(-1,-2);descParams.topMargin=dp(compact?5:9);body.addView(description,descParams);
+        if(compact){icon.getLayoutParams().width=dp(44);icon.getLayoutParams().height=dp(44);description.setMaxLines(1);}
         MaterialButton action=new MaterialButton(context);action.setCornerRadius(dp(18));action.setMinHeight(dp(40));action.setMinimumHeight(dp(40));
         action.setTextSize(12);action.setTypeface(null,1);action.setInsetTop(0);action.setInsetBottom(0);
         LinearLayout.LayoutParams ap=new LinearLayout.LayoutParams(-2,dp(40));ap.topMargin=dp(10);body.addView(action,ap);
@@ -59,6 +62,7 @@ public final class VStoreAdapter extends ListAdapter<VStoreAppItem,VStoreAdapter
         h.title.setText(item.name);
         h.version.setText("v"+item.version);
         h.description.setText(item.description);
+        try { if(item.packageName!=null&&!item.packageName.isEmpty()){android.content.pm.ApplicationInfo info=context.getPackageManager().getApplicationInfo(item.packageName,0);h.icon.setImageDrawable(context.getPackageManager().getApplicationIcon(info));} else h.icon.setImageResource(android.R.drawable.sym_def_app_icon); } catch(Exception ignored){h.icon.setImageResource(android.R.drawable.sym_def_app_icon);}
         boolean ready=item.downloadUrl!=null&&!item.downloadUrl.isEmpty();
         h.action.setText(ready?"СКАЧАТЬ":"В РАЗРАБОТКЕ");
         h.action.setEnabled(ready);
