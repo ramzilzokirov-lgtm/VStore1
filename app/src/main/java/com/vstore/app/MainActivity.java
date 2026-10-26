@@ -70,7 +70,7 @@ public class MainActivity extends Activity {
         search=new EditText(this);search.setSingleLine(true);search.setTextSize(16);search.setHint("Поиск модов и приложений...");search.setTextColor(text);search.setHintTextColor(0xff8e8a9f);search.setPadding(dp(8),0,dp(8),0);search.setBackgroundColor(Color.TRANSPARENT);searchWrap.addView(search,new LinearLayout.LayoutParams(0,-1,1));
         status=label("",12,muted);status.setVisibility(View.GONE);root.addView(status);
         ScrollView sc=new ScrollView(this);list=new LinearLayout(this);list.setOrientation(1);sc.addView(list);root.addView(sc,new LinearLayout.LayoutParams(-1,0,1));
-        catalogRecycler=new RecyclerView(this);catalogRecycler.setLayoutManager(new LinearLayoutManager(this));catalogRecycler.setNestedScrollingEnabled(false);catalogAdapter=new VStoreAdapter(this,item->{showAppDetails(item.toJson());},item->{download(item.toJson());});catalogRecycler.setAdapter(catalogAdapter);
+        catalogRecycler=new RecyclerView(this);catalogRecycler.setLayoutManager(new LinearLayoutManager(this));catalogRecycler.setNestedScrollingEnabled(false);catalogAdapter=new VStoreAdapter(this,item->{showAppDetails(item.toJson());},item->{download(item.toJson());},progress);catalogRecycler.setAdapter(catalogAdapter);
         setContentView(root); boolean reduce=getSharedPreferences(PREF_UI,MODE_PRIVATE).getBoolean("reduce_motion",false); if(animationDuration>0&&!reduce){root.setAlpha(0f);root.setTranslationY(dp(22));root.setScaleX(.985f);root.setScaleY(.985f);root.animate().alpha(1f).translationY(0f).scaleX(1f).scaleY(1f).setInterpolator(new android.view.animation.DecelerateInterpolator(1.6f)).setDuration(animationDuration+180L).start(); animateEntrance(top,0); animateEntrance(hero,70); animateEntrance(importApk,110); animateEntrance(hsv,150); animateEntrance(searchWrap,190);}
         search.addTextChangedListener(new android.text.TextWatcher(){public void beforeTextChanged(CharSequence s,int st,int c,int a){}public void onTextChanged(CharSequence s,int st,int before,int count){render();}public void afterTextChanged(android.text.Editable e){}});
         File dir=new File(getFilesDir(),"library");if(dir.exists()){File[] fs=dir.listFiles((d,n)->n.toLowerCase(Locale.ROOT).endsWith(".apk"));if(fs!=null)localApps.addAll(Arrays.asList(fs));}
@@ -199,7 +199,42 @@ public class MainActivity extends Activity {
     private String shortHash(String s){return s.isEmpty()?"—":s.substring(0,Math.min(12,s.length()))+"…";}
     private boolean installed(String pkg){try{getPackageManager().getPackageInfo(pkg,0);return true;}catch(Exception e){return false;}}
     private void loadIcon(String url,ImageView target){pool.execute(()->{try{HttpURLConnection c=(HttpURLConnection)new URL(url).openConnection();c.setConnectTimeout(5000);c.setReadTimeout(7000);Bitmap b=BitmapFactory.decodeStream(c.getInputStream());if(b!=null)runOnUiThread(()->target.setImageBitmap(b));}catch(Exception ignored){}});}
-    private void download(JSONObject a){String id=a.optString("id"),url=a.optString("download_url");progress.put(id,0);render();pool.execute(()->{File out=new File(getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS),id+".apk");try{HttpURLConnection c=(HttpURLConnection)new URL(url).openConnection();c.setConnectTimeout(15000);c.setReadTimeout(120000);int len=c.getContentLength();try(InputStream in=c.getInputStream();OutputStream os=new FileOutputStream(out)){byte[] b=new byte[32768];int n;long total=0;while((n=in.read(b))!=-1){os.write(b,0,n);total+=n;if(len>0){int pct=(int)(total*100/len);progress.put(id,pct);runOnUiThread(this::render);}}}String expected=a.optString("sha256","");if(!expected.isEmpty()&&!expected.equalsIgnoreCase(sha256(out)))throw new IOException("SHA-256 не совпал");progress.remove(id);runOnUiThread(()->{render();install(out);});}catch(Exception e){progress.remove(id);if(out.exists())out.delete();runOnUiThread(()->{render();toast("Ошибка загрузки: "+e.getMessage());});}});}
+    private void download(JSONObject a){
+        final String id=a.optString("id","app"),url=a.optString("download_url","");
+        if(url.isEmpty()){toast("Ссылка на APK пока не опубликована");return;}
+        synchronized(progress){if(progress.containsKey(id)){toast("Загрузка уже выполняется");return;}progress.put(id,0);}
+        render();
+        pool.execute(()->{
+            File dir=getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS);
+            File out=new File(dir==null?getFilesDir():dir,id+".apk"),part=new File(out.getAbsolutePath()+".part");
+            HttpURLConnection conn=null;
+            try{
+                if(!url.startsWith("https://")&&!url.startsWith("http://"))throw new IOException("Некорректная ссылка");
+                conn=(HttpURLConnection)new URL(url).openConnection();conn.setInstanceFollowRedirects(true);conn.setConnectTimeout(20000);conn.setReadTimeout(120000);conn.setRequestProperty("User-Agent","VStore-Android/1.0");conn.connect();
+                int code=conn.getResponseCode();if(code<200||code>=300)throw new IOException("HTTP "+code);
+                long len=conn.getContentLengthLong();long total=0;long lastUi=0;
+                try(InputStream in=conn.getInputStream();OutputStream os=new FileOutputStream(part)){
+                    byte[] b=new byte[32768];int n;
+                    while((n=in.read(b))!=-1){os.write(b,0,n);total+=n;
+                        if(len>0){int pct=(int)Math.min(99,total*100/len);synchronized(progress){progress.put(id,pct);}
+                        }else{synchronized(progress){progress.put(id,0);}}
+                        long now=android.os.SystemClock.elapsedRealtime();if(now-lastUi>180||n<0){lastUi=now;runOnUiThread(()->{if(!isFinishing())render();});}
+                    }
+                    os.flush();
+                }
+                if(total==0)throw new IOException("Сервер вернул пустой файл");
+                String expected=a.optString("sha256","");if(!expected.isEmpty()&&!expected.equalsIgnoreCase(sha256(part)))throw new IOException("SHA-256 не совпал");
+                if(out.exists()&&!out.delete())throw new IOException("Не удалось заменить старый APK");
+                if(!part.renameTo(out))throw new IOException("Не удалось сохранить APK");
+                synchronized(progress){progress.remove(id);}
+                runOnUiThread(()->{if(!isFinishing()){render();toast("Загрузка завершена");install(out);}});
+            }catch(Exception e){
+                if(part.exists())part.delete();synchronized(progress){progress.remove(id);}
+                String message=e.getMessage()==null?e.getClass().getSimpleName():e.getMessage();
+                runOnUiThread(()->{if(!isFinishing()){render();toast("Ошибка загрузки: "+message);}});
+            }finally{if(conn!=null)conn.disconnect();}
+        });
+    }
     private void install(File apk){try{PackageInstaller pi=getPackageManager().getPackageInstaller();PackageInstaller.SessionParams p=new PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL);int id=pi.createSession(p);try(PackageInstaller.Session s=pi.openSession(id);InputStream in=new FileInputStream(apk);OutputStream out=s.openWrite("base.apk",0,apk.length())){byte[] b=new byte[65536];int n;while((n=in.read(b))!=-1)out.write(b,0,n);s.fsync(out);}Intent callback=new Intent(this,InstallResultReceiver.class);callback.setAction("com.vstore.app.INSTALL_RESULT");PendingIntent pending=PendingIntent.getBroadcast(this,id,callback,PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_MUTABLE);try(PackageInstaller.Session s=pi.openSession(id)){s.commit(pending.getIntentSender());}}catch(Exception e){toast("Не удалось запустить установщик: "+e.getMessage());}}
     private Drawable apkIcon(File f){try{PackageInfo p=getPackageManager().getPackageArchiveInfo(f.getAbsolutePath(),0);if(p!=null&&p.applicationInfo!=null){p.applicationInfo.sourceDir=f.getAbsolutePath();p.applicationInfo.publicSourceDir=f.getAbsolutePath();return p.applicationInfo.loadIcon(getPackageManager());}}catch(Exception ignored){}return getDrawable(android.R.drawable.sym_def_app_icon);}
     private String apkLabel(File f){try{PackageInfo p=getPackageManager().getPackageArchiveInfo(f.getAbsolutePath(),0);if(p!=null&&p.applicationInfo!=null){p.applicationInfo.sourceDir=f.getAbsolutePath();p.applicationInfo.publicSourceDir=f.getAbsolutePath();CharSequence s=p.applicationInfo.loadLabel(getPackageManager());if(s!=null)return s.toString();}}catch(Exception ignored){}return f.getName();}
