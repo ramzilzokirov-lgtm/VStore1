@@ -4,7 +4,7 @@
   "community": {
     "title": "Сообщество VStore",
     "subtitle": "Релизы, тестовые сборки и новости проектов",
-    "telegram_url": "https://t.me/"
+    "telegram_url": "https://t.me/margymods"
   },
   "creator": {
     "id": "8436409687",
@@ -29,9 +29,9 @@
       "id": "vstt",
       "name": "vstT",
       "category": "Clients",
-      "version": "—",
-      "badge": "",
-      "description": "Клиент проекта vstT. Добавь ссылку на APK в каталог, чтобы опубликовать релиз.",
+      "version": "В разработке",
+      "badge": "SOON",
+      "description": "Клиент vstT находится в разработке. Релизная ссылка будет добавлена после публикации APK.",
       "icon_url": "",
       "download_url": "",
       "package_name": "",
