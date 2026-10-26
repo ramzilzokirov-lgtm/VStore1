@@ -53,6 +53,7 @@ public class MainActivity extends Activity {
         LinearLayout banner=new LinearLayout(this);banner.setOrientation(1);banner.setPadding(15,12,15,12);banner.setBackground(round(0xff33283d,24));LinearLayout.LayoutParams bp=new LinearLayout.LayoutParams(-1,-2);bp.setMargins(0,12,0,10);root.addView(banner,bp);
         banner.addView(label("СООБЩЕСТВО VSTORE",13,lavender));banner.addView(label("Релизы, тестовые сборки и новости проектов",13,text));
         TextView telegram=label("Открыть Telegram-канал  ↗",13,lavender);banner.addView(telegram);telegram.setOnClickListener(v->openUrl("https://t.me/Vmods2"));
+        TextView importApk=label("＋ Импортировать APK",14,lavender);importApk.setPadding(4,10,4,10);root.addView(importApk);importApk.setOnClickListener(v->{Intent pick=new Intent(Intent.ACTION_OPEN_DOCUMENT);pick.setType("application/vnd.android.package-archive");pick.addCategory(Intent.CATEGORY_OPENABLE);startActivityForResult(pick,PICK_APK);});
         tabs=new LinearLayout(this);tabs.setOrientation(0);HorizontalScrollView hsv=new HorizontalScrollView(this);hsv.setHorizontalScrollBarEnabled(false);hsv.addView(tabs);root.addView(hsv);
         search=new EditText(this);search.setSingleLine(true);search.setHint("Поиск проектов");search.setTextColor(text);search.setHintTextColor(muted);search.setBackgroundTintList(android.content.res.ColorStateList.valueOf(lavender));root.addView(search);
         status=label("Загрузка каталога…",12,muted);root.addView(status);
@@ -125,13 +126,25 @@ public class MainActivity extends Activity {
         LinearLayout col=new LinearLayout(this);col.setOrientation(1);col.setPadding(12,0,0,0);row.addView(col,new LinearLayout.LayoutParams(0,-2,1));
         LinearLayout nameRow=new LinearLayout(this);nameRow.setGravity(Gravity.CENTER_VERTICAL);col.addView(nameRow);TextView name=label(a.optString("name","Project"),16,text);name.setTypeface(null,1);nameRow.addView(name);String badge=a.optString("badge","");if(!badge.isEmpty()){TextView b=label(" "+badge+" ",10,bg);b.setBackground(round(lavender,8));LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-2,-2);p.setMargins(7,0,0,0);nameRow.addView(b,p);}
         col.addView(label(a.optString("category","Apps")+" • "+a.optString("version",""),11,muted));
-        c.addView(label(a.optString("description",""),13,text));
+        TextView description=label(a.optString("description",""),13,text);c.addView(description);c.setOnClickListener(v->showAppDetails(a));
         String id=a.optString("id");Integer pr=progress.get(id);if(pr!=null&&pr>=0&&pr<100){ProgressBar bar=new ProgressBar(this,null,android.R.attr.progressBarStyleHorizontal);bar.setMax(100);bar.setProgress(pr);c.addView(bar);c.addView(label("Загрузка "+pr+"%",11,lavender));}
         LinearLayout actions=new LinearLayout(this);actions.setGravity(Gravity.CENTER_VERTICAL);c.addView(actions);
         String pkg=a.optString("package_name","");boolean installed=!pkg.isEmpty()&&installed(pkg);String url=a.optString("download_url","");
         String action=installed?"ОБНОВИТЬ":(url.isEmpty()?"НЕТ APK":"СКАЧАТЬ");
         TextView button=label(action,13,bg);button.setTypeface(null,1);button.setGravity(Gravity.CENTER);button.setPadding(20,11,20,11);button.setBackground(round(url.isEmpty()?0xff615967:lavender,18));actions.addView(button);button.setOnClickListener(v->{if(url.isEmpty()){toast("Для этого проекта ещё не опубликована ссылка на APK.");return;}download(a);});
         TextView version=label("  SHA-256 "+shortHash(a.optString("sha256","")),10,muted);actions.addView(version);
+    }
+
+    private void showAppDetails(JSONObject a){
+        LinearLayout box=new LinearLayout(this);box.setOrientation(1);box.setPadding(20,8,20,4);
+        String name=a.optString("name","Приложение");
+        box.addView(label(a.optString("description","Описание отсутствует"),15,text));
+        box.addView(label("Категория: "+a.optString("category","Приложения"),13,muted));
+        box.addView(label("Версия: "+a.optString("version","не указана"),13,muted));
+        box.addView(label("Пакет: "+a.optString("package_name","не указан"),13,muted));
+        box.addView(label("Размер: "+(a.optLong("size",0)>0?String.format(Locale.ROOT,"%.1f МБ",a.optLong("size")/1048576f):"неизвестен"),13,muted));
+        String hash=a.optString("sha256","");box.addView(label("SHA-256: "+(hash.isEmpty()?"не опубликован":hash),11,muted));
+        new AlertDialog.Builder(this).setTitle(name).setView(box).setPositiveButton("Закрыть",null).show();
     }
     private void localCard(File f){LinearLayout c=card();LinearLayout row=new LinearLayout(this);row.setGravity(Gravity.CENTER_VERTICAL);c.addView(row);ImageView icon=new ImageView(this);icon.setImageDrawable(apkIcon(f));row.addView(icon,new LinearLayout.LayoutParams(48,48));TextView name=label(apkLabel(f),16,text);name.setTypeface(null,1);name.setPadding(12,0,0,0);row.addView(name,new LinearLayout.LayoutParams(0,-2,1));TextView t=label("Локальный APK • "+String.format(Locale.ROOT,"%.1f MB",f.length()/1048576f)+" • SHA-256 "+shortHash(safeSha256(f)),12,muted);c.addView(t);LinearLayout actions=new LinearLayout(this);actions.setGravity(Gravity.CENTER_VERTICAL);c.addView(actions);TextView install=label("УСТАНОВИТЬ",13,bg);install.setGravity(Gravity.CENTER);install.setPadding(16,10,16,10);install.setBackground(round(lavender,18));actions.addView(install);install.setOnClickListener(v->install(f));TextView remove=label("  Удалить",13,muted);remove.setPadding(14,10,8,10);actions.addView(remove);remove.setOnClickListener(v->new AlertDialog.Builder(this).setTitle("Удалить APK?").setMessage(f.getName()).setNegativeButton("Отмена",null).setPositiveButton("Удалить",(d,w)->{if(f.delete())localApps.remove(f);render();}).show());}
     private String safeSha256(File f){try{return sha256(f);}catch(Exception e){return "ошибка";}}
