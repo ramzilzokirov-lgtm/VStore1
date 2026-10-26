@@ -44,7 +44,7 @@ public class MainActivity extends Activity {
     private int animationDuration=260;
     private static final String PREF_UI="vstore_ui";
     private LinearLayout pageRoot;
-    private final HashMap<String,Integer> progress=new HashMap<>();
+    private final java.util.concurrent.ConcurrentHashMap<String,Integer> progress=new java.util.concurrent.ConcurrentHashMap<>();
     @Override public void onCreate(Bundle b){
         super.onCreate(b); loadAppearance(); getWindow().setStatusBarColor(bg);getWindow().setNavigationBarColor(bg);
         LinearLayout root=new LinearLayout(this);pageRoot=root;root.setOrientation(1);root.setPadding(16,12,16,6);GradientDrawable screenBg=new GradientDrawable(GradientDrawable.Orientation.TL_BR,new int[]{0xff161424,0xff0a0910});root.setBackground(getDrawable(com.vstore.app.R.drawable.bg_screen_gradient));
