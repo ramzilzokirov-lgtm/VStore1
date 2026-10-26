@@ -48,7 +48,7 @@ public class MainActivity extends Activity {
         root.addView(label("Главный разработчик / Разиль Закиров • ID 8436409687",12,muted));
         LinearLayout banner=new LinearLayout(this);banner.setOrientation(1);banner.setPadding(15,12,15,12);banner.setBackground(round(0xff33283d,24));LinearLayout.LayoutParams bp=new LinearLayout.LayoutParams(-1,-2);bp.setMargins(0,12,0,10);root.addView(banner,bp);
         banner.addView(label("СООБЩЕСТВО VSTORE",13,lavender));banner.addView(label("Релизы, тестовые сборки и новости проектов",13,text));
-        TextView telegram=label("Открыть Telegram-канал  ↗",13,lavender);banner.addView(telegram);telegram.setOnClickListener(v->openUrl("https://t.me/margymods"));
+        TextView telegram=label("Открыть Telegram-канал  ↗",13,lavender);banner.addView(telegram);telegram.setOnClickListener(v->openUrl("https://t.me/Vmods2"));
         tabs=new LinearLayout(this);tabs.setOrientation(0);HorizontalScrollView hsv=new HorizontalScrollView(this);hsv.setHorizontalScrollBarEnabled(false);hsv.addView(tabs);root.addView(hsv);
         search=new EditText(this);search.setSingleLine(true);search.setHint("Поиск проектов");search.setTextColor(text);search.setHintTextColor(muted);search.setBackgroundTintList(android.content.res.ColorStateList.valueOf(lavender));root.addView(search);
         status=label("Загрузка каталога…",12,muted);root.addView(status);
