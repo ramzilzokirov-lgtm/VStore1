@@ -79,7 +79,9 @@ public class MainActivity extends Activity {
         logCurrentCertificateSha256();
     }
 
-    private void animateEntrance(View view,long delay){if(view==null)return;view.setAlpha(0f);view.setTranslationY(dp(18));view.animate().alpha(1f).translationY(0f).setStartDelay(delay).setDuration(Math.max(180,animationDuration)).setInterpolator(new android.view.animation.DecelerateInterpolator(1.5f)).start();}\n\n    private void loadAppearance(){
+    private void animateEntrance(View view,long delay){if(view==null)return;view.setAlpha(0f);view.setTranslationY(dp(18));view.animate().alpha(1f).translationY(0f).setStartDelay(delay).setDuration(Math.max(180,animationDuration)).setInterpolator(new android.view.animation.DecelerateInterpolator(1.5f)).start();}
+
+    private void loadAppearance(){
         android.content.SharedPreferences p=getSharedPreferences(PREF_UI,MODE_PRIVATE);
         String theme=p.getString("theme","dark");
         if("system".equals(theme)){int night=getResources().getConfiguration().uiMode & android.content.res.Configuration.UI_MODE_NIGHT_MASK;if(night==android.content.res.Configuration.UI_MODE_NIGHT_NO){bg=0xfff7f1f8;panel=0xffeee6f1;text=0xff241d29;muted=0xff6e6374;lavender=0xff8050a0;}}
