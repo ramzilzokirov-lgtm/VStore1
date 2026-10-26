@@ -1,15 +1,10 @@
 {
   "schema_version": 1,
-  "catalog_title": "VStore // Developer Hub",
+  "catalog_title": "VStore",
   "community": {
-    "title": "Канал в Telegram // VGRAM INSIDER",
-    "subtitle": "Новости, обновления модов и плагины: @margymods",
-    "telegram_url": "https://t.me/margymods"
-  },
-  "creator": {
-    "id": "8436409687",
-    "name": "Разиль Закиров",
-    "role": "Главный разработчик"
+    "title": "Telegram // @Money_fun",
+    "subtitle": "Новости, обновления модов и плагины",
+    "telegram_url": "https://t.me/Money_fun"
   },
   "apps": [
     {
