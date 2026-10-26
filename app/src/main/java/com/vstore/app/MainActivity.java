@@ -57,14 +57,21 @@ public class MainActivity extends Activity {
         root.addView(top);
         
         LinearLayout banner=new LinearLayout(this);banner.setOrientation(1);banner.setPadding(15,12,15,12);banner.setBackground(round(0x1affffff,24));LinearLayout.LayoutParams bp=new LinearLayout.LayoutParams(-1,-2);bp.setMargins(0,12,0,10);root.addView(banner,bp);
-        banner.addView(label("✈",28,lavender));banner.addView(label("Канал в Telegram // VGRAM INSIDER",16,text));banner.addView(label("Новости, обновления модов и плагины: @margymods",13,muted));
-        TextView telegram=label("Открыть Telegram-канал  ↗",13,lavender);banner.addView(telegram);telegram.setOnClickListener(v->openUrl("https://t.me/margymods"));
+        MaterialCardView hero=new MaterialCardView(this);hero.setRadius(dp(24));hero.setCardElevation(0);hero.setStrokeWidth(dp(1));hero.setStrokeColor(0x30ffffff);hero.setCardBackgroundColor(0x1affffff);hero.setUseCompatPadding(false);hero.setContentPadding(dp(16),dp(14),dp(16),dp(14));LinearLayout.LayoutParams hp=new LinearLayout.LayoutParams(-1,-2);hp.setMargins(0,dp(12),0,dp(10));root.addView(hero,hp);
+        LinearLayout heroBody=new LinearLayout(this);heroBody.setOrientation(1);hero.addView(heroBody);
+        LinearLayout heroHead=new LinearLayout(this);heroHead.setGravity(Gravity.CENTER_VERTICAL);heroBody.addView(heroHead);
+        TextView tgIcon=label("➤",24,0xffffffff);tgIcon.setGravity(Gravity.CENTER);GradientDrawable tgBg=new GradientDrawable(GradientDrawable.Orientation.TL_BR,new int[]{0xff7c4dff,0xff3478f6});tgBg.setShape(GradientDrawable.OVAL);tgIcon.setBackground(tgBg);heroHead.addView(tgIcon,new LinearLayout.LayoutParams(dp(44),dp(44)));
+        TextView heroTitle=label("Канал в Telegram // VGRAM INSIDER",16,text);LinearLayout.LayoutParams htp=new LinearLayout.LayoutParams(0,-2,1);htp.leftMargin=dp(12);heroHead.addView(heroTitle,htp);
+        TextView heroSub=label("Новости, обновления модов и плагины: @Vmods2",13,muted);LinearLayout.LayoutParams hsp=new LinearLayout.LayoutParams(-1,-2);hsp.topMargin=dp(10);heroBody.addView(heroSub,hsp);
+        TextView telegram=label("Открыть Telegram-канал  ↗",14,lavender);LinearLayout.LayoutParams tlp=new LinearLayout.LayoutParams(-1,-2);tlp.topMargin=dp(4);heroBody.addView(telegram,tlp);hero.setOnClickListener(v->openUrl("https://t.me/Vmods2"));telegram.setOnClickListener(v->openUrl("https://t.me/Vmods2"));
         TextView importApk=label("＋ Импортировать APK",14,lavender);importApk.setPadding(4,10,4,10);root.addView(importApk);importApk.setOnClickListener(v->{Intent pick=new Intent(Intent.ACTION_OPEN_DOCUMENT);pick.setType("application/vnd.android.package-archive");pick.addCategory(Intent.CATEGORY_OPENABLE);startActivityForResult(pick,PICK_APK);});
         tabs=new LinearLayout(this);tabs.setOrientation(0);HorizontalScrollView hsv=new HorizontalScrollView(this);hsv.setHorizontalScrollBarEnabled(false);hsv.addView(tabs);root.addView(hsv);
-        search=new EditText(this);search.setSingleLine(true);search.setHint("Поиск модов и приложений...");search.setTextColor(text);search.setHintTextColor(muted);search.setPadding(18,12,18,12);search.setBackground(round(0x1affffff,28));root.addView(search);
-        status=label("Загрузка каталога…",12,muted);root.addView(status);
+        LinearLayout searchWrap=new LinearLayout(this);searchWrap.setGravity(Gravity.CENTER_VERTICAL);searchWrap.setPadding(dp(16),0,dp(12),0);searchWrap.setBackground(round(0x15ffffff,26));LinearLayout.LayoutParams swp=new LinearLayout.LayoutParams(-1,dp(52));swp.topMargin=dp(4);root.addView(searchWrap,swp);
+        TextView magnifier=label("⌕",25,muted);magnifier.setGravity(Gravity.CENTER);searchWrap.addView(magnifier,new LinearLayout.LayoutParams(dp(28),-1));
+        search=new EditText(this);search.setSingleLine(true);search.setTextSize(16);search.setHint("Поиск модов и приложений...");search.setTextColor(text);search.setHintTextColor(0xff8e8a9f);search.setPadding(dp(8),0,dp(8),0);search.setBackgroundColor(Color.TRANSPARENT);searchWrap.addView(search,new LinearLayout.LayoutParams(0,-1,1));
+        status=label("",12,muted);status.setVisibility(View.GONE);root.addView(status);
         ScrollView sc=new ScrollView(this);list=new LinearLayout(this);list.setOrientation(1);sc.addView(list);root.addView(sc,new LinearLayout.LayoutParams(-1,0,1));
-        catalogRecycler=new RecyclerView(this);catalogRecycler.setLayoutManager(new LinearLayoutManager(this));catalogRecycler.setNestedScrollingEnabled(false);catalogAdapter=new VStoreAdapter(this,item->{showAppDetails(item.toJson());},item->{download(item.toJson());});
+        catalogRecycler=new RecyclerView(this);catalogRecycler.setLayoutManager(new LinearLayoutManager(this));catalogRecycler.setNestedScrollingEnabled(false);catalogAdapter=new VStoreAdapter(this,item->{showAppDetails(item.toJson());},item->{download(item.toJson());});catalogRecycler.setAdapter(catalogAdapter);
         setContentView(root); if(animationDuration>0){root.setAlpha(0f);root.setTranslationY(18f);root.animate().alpha(1f).translationY(0f).setDuration(animationDuration+120L).start();}
         search.addTextChangedListener(new android.text.TextWatcher(){public void beforeTextChanged(CharSequence s,int st,int c,int a){}public void onTextChanged(CharSequence s,int st,int before,int count){render();}public void afterTextChanged(android.text.Editable e){}});
         File dir=new File(getFilesDir(),"library");if(dir.exists()){File[] fs=dir.listFiles((d,n)->n.toLowerCase(Locale.ROOT).endsWith(".apk"));if(fs!=null)localApps.addAll(Arrays.asList(fs));}
@@ -98,13 +105,14 @@ public class MainActivity extends Activity {
         SeekBar seek=new SeekBar(this);seek.setMax(600);seek.setProgress(animationDuration);content.addView(seek);seek.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener(){public void onProgressChanged(SeekBar s,int p,boolean u){speed.setText("Длительность: "+p+" мс");}public void onStartTrackingTouch(SeekBar s){}public void onStopTrackingTouch(SeekBar s){getSharedPreferences(PREF_UI,0).edit().putInt("animation_ms",s.getProgress()).apply();}});
         new AlertDialog.Builder(this).setTitle("Настройки").setView(content).setPositiveButton("Применить",(d,w)->recreate()).setNegativeButton("Закрыть",null).show();
     }
-    private void makeTabs(){tabs.removeAllViews();String[] names={"Все проекты","Мои приложения","Плагины & Моды","Эксклюзив"};for(String n:names){TextView t=label(n,13,n.equals(activeTab)?bg:text);t.setGravity(Gravity.CENTER);t.setPadding(14,10,14,10);t.setBackground(round(n.equals(activeTab)?lavender:panel,22));LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-2,-2);p.setMargins(0,0,8,6);tabs.addView(t,p);t.setOnClickListener(v->{activeTab=n;makeTabs();render();});}}
+    private void makeTabs(){tabs.removeAllViews();String[] names={"Все проекты","Мои приложения","Плагины & Моды","Эксклюзив"};for(String n:names){TextView t=label(n,13,n.equals(activeTab)?bg:text);t.setGravity(Gravity.CENTER);t.setPadding(14,10,14,10);t.setBackground(round(n.equals(activeTab)?lavender:panel,18));LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-2,-2);p.setMargins(0,0,8,6);tabs.addView(t,p);t.setOnClickListener(v->{activeTab=n;makeTabs();render();});}}
     private int dp(float value){return (int)(value*getResources().getDisplayMetrics().density+0.5f);}
     private GradientDrawable round(int color,int radius){GradientDrawable d=new GradientDrawable();d.setColor(color);d.setCornerRadius(dp(radius));d.setStroke(dp(1),0x33ffffff);return d;}
     private TextView label(String s,int size,int color){TextView t=new TextView(this);t.setText(s);t.setTextSize(size);t.setTextColor(color);t.setPadding(0,3,0,3);return t;}
-    private void loadCached(){String raw=getPreferences(0).getString("catalog_json","");if(!raw.isEmpty())try{applyCatalog(new JSONObject(raw),false);}catch(Exception ignored){}}
+    private void loadCached(){String raw=getPreferences(0).getString("catalog_json","");if(!raw.isEmpty())try{applyCatalog(new JSONObject(raw),false);}catch(Exception ignored){}if(apps.isEmpty())loadBundledDefaults();}
+    private void loadBundledDefaults(){try{JSONObject root=new JSONObject();JSONArray a=new JSONArray();JSONObject v=new JSONObject();v.put("id","vgram_main");v.put("name","VGRAM Client");v.put("category","Clients");v.put("version","0.1.366");v.put("badge","LATEST");v.put("description","Модифицированный Telegram-клиент VGRAM. APK опубликован в GitHub Releases.");v.put("download_url","https://github.com/ramzilzokirov-lgtm/VGRAM-Main/releases/download/v0.1.366/VGRAM-debug.apk");v.put("package_name","org.telegram.messenger");a.put(v);JSONObject t=new JSONObject();t.put("id","vstt");t.put("name","vstT");t.put("category","Clients");t.put("version","В разработке");t.put("badge","SOON");t.put("description","Клиент vstT находится в разработке. Релизная ссылка будет добавлена после публикации APK.");t.put("download_url","");t.put("package_name","");a.put(t);root.put("apps",a);applyCatalog(root,false);}catch(Exception e){Log.e("VStore","Bundled catalog failed",e);}}
     private void loadCatalog(boolean force){
-        status.setText("Обновление каталога…");
+        status.setText("");
         pool.execute(()->{
             try {
                 HttpURLConnection conn=(HttpURLConnection)new URL(API+"/api/apps"+(force?"?v="+System.currentTimeMillis():"")).openConnection();
@@ -114,12 +122,12 @@ public class MainActivity extends Activity {
                     item.put("id",src.optString("id"));item.put("name",src.optString("name","Приложение"));item.put("category","Apps");item.put("version",src.optString("version_name",""));item.put("description",src.optString("description",""));item.put("package_name",src.optString("package_name",""));item.put("sha256",src.optString("sha256",""));item.put("download_url",API+src.optString("download_url",""));item.put("creator_id",src.optString("creator_id",""));normalized.put(item);}
                 json.put("apps",normalized);String cached=json.toString();getPreferences(0).edit().putString("catalog_json",cached).apply();runOnUiThread(()->applyCatalog(json,true));
             }catch(Exception apiError){
-                try{HttpURLConnection conn=(HttpURLConnection)new URL(CATALOG_URL+(force?"?v="+System.currentTimeMillis():"")).openConnection();conn.setConnectTimeout(8000);conn.setReadTimeout(12000);conn.setUseCaches(!force);String raw=readText(conn.getInputStream());JSONObject json=new JSONObject(raw);getPreferences(0).edit().putString("catalog_json",raw).apply();runOnUiThread(()->{status.setText("Каталог GitHub • серверный каталог недоступен");applyCatalog(json,true);});}
-                catch(Exception fallbackError){runOnUiThread(()->{status.setText("Показан кэш • сервер и GitHub недоступны");render();});}
+                try{HttpURLConnection conn=(HttpURLConnection)new URL(CATALOG_URL+(force?"?v="+System.currentTimeMillis():"")).openConnection();conn.setConnectTimeout(8000);conn.setReadTimeout(12000);conn.setUseCaches(!force);String raw=readText(conn.getInputStream());JSONObject json=new JSONObject(raw);getPreferences(0).edit().putString("catalog_json",raw).apply();runOnUiThread(()->{status.setText("");applyCatalog(json,true);});}
+                catch(Exception fallbackError){runOnUiThread(()->{status.setText("");if(apps.isEmpty())loadBundledDefaults();render();});}
             }
         });
     }
-    private void applyCatalog(JSONObject json,boolean fresh){JSONArray a=json.optJSONArray("apps");if(a==null)return;synchronized(apps){apps.clear();for(int i=0;i<a.length();i++)apps.add(a.optJSONObject(i));}runOnUiThread(()->{status.setText(fresh?"Каталог обновлён":"Кэш каталога");render();});}
+    private void applyCatalog(JSONObject json,boolean fresh){JSONArray a=json.optJSONArray("apps");if(a==null||a.length()==0)return;synchronized(apps){apps.clear();for(int i=0;i<a.length();i++)apps.add(a.optJSONObject(i));}runOnUiThread(()->{status.setText("");render();});}
     private void render(){
         if(list==null)return;
         list.removeAllViews();
@@ -141,6 +149,7 @@ public class MainActivity extends Activity {
         int count=visible.size();
         if(activeTab.equals("Мои приложения"))for(File f:localApps)if(f.getName().toLowerCase(Locale.ROOT).contains(q)){localCard(f);count++;}
         if(count==0){
+            if(snapshot.isEmpty()) loadBundledDefaults();
             TextView empty=label("\nЗдесь пока нет опубликованных проектов.\nКаталог обновляется отдельно от APK клиента.",15,muted);
             empty.setGravity(Gravity.CENTER);empty.setPadding(20,48,20,48);list.addView(empty);
         }
