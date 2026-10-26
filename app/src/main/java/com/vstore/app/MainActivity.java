@@ -89,8 +89,18 @@ public class MainActivity extends Activity {
         if("light".equals(theme)){bg=0xfff7f1f8;panel=0xffeee6f1;text=0xff241d29;muted=0xff6e6374;lavender=0xff8050a0;}
         if(dynamic){try{bg=getColor(android.R.color.system_neutral1_900);panel=getColor(android.R.color.system_neutral1_800);text=getColor(android.R.color.system_neutral1_50);lavender=getColor(android.R.color.system_accent1_200);muted=getColor(android.R.color.system_neutral2_200);}catch(Exception ignored){}}
         String accent=p.getString("accent","lavender");
-        if("blue".equals(accent)){lavender=0xff9ccaff;}else if("green".equals(accent)){lavender=0xffa6dfb0;}else if("pink".equals(accent)){lavender=0xffffb6d5;}
+        if("blue".equals(accent)){lavender=0xff9ccaff;}else if("green".equals(accent)){lavender=0xffa6dfb0;}else if("pink".equals(accent)){lavender=0xffffb6d5;}else if("custom".equals(accent)){lavender=p.getInt("custom_accent",0xff7c4dff);}
         animationDuration=p.getInt("animation_ms",260);
+    }
+    private void showCustomColorDialog(){
+        android.content.SharedPreferences prefs=getSharedPreferences(PREF_UI,MODE_PRIVATE);
+        int current=prefs.getInt("custom_accent",lavender);
+        LinearLayout box=new LinearLayout(this);box.setOrientation(1);box.setPadding(dp(20),dp(12),dp(20),dp(4));
+        TextView preview=label("ПРЕДПРОСМОТР  ●  VStore",18,text);preview.setGravity(Gravity.CENTER);preview.setPadding(0,dp(18),0,dp(18));preview.setBackground(round(current,20));box.addView(preview,new LinearLayout.LayoutParams(-1,dp(64)));
+        EditText hex=new EditText(this);hex.setSingleLine(true);hex.setHint("#7C4DFF или #RRGGBB");hex.setText(String.format(Locale.ROOT,"#%06X",(0xFFFFFF&current)));hex.setInputType(android.text.InputType.TYPE_CLASS_TEXT);LinearLayout.LayoutParams ep=new LinearLayout.LayoutParams(-1,-2);ep.topMargin=dp(10);box.addView(hex,ep);
+        TextView rgb=label(String.format(Locale.ROOT,"RGB: %d, %d, %d",Color.red(current),Color.green(current),Color.blue(current)),13,muted);box.addView(rgb);
+        hex.addTextChangedListener(new android.text.TextWatcher(){public void beforeTextChanged(CharSequence s,int st,int count,int after){}public void onTextChanged(CharSequence s,int st,int before,int count){try{int color=Color.parseColor(s.toString().trim().startsWith("#")?s.toString().trim():"#"+s.toString().trim());preview.setBackground(round(color,20));rgb.setText(String.format(Locale.ROOT,"RGB: %d, %d, %d",Color.red(color),Color.green(color),Color.blue(color)));}catch(Exception ignored){}}public void afterTextChanged(android.text.Editable e){}});
+        new AlertDialog.Builder(this).setTitle("Свой цвет").setMessage("Введи HEX: #RRGGBB или #AARRGGBB").setView(box).setNegativeButton("Отмена",null).setNeutralButton("Сбросить", (d,w)->{prefs.edit().remove("custom_accent").putString("accent","lavender").apply();recreate();}).setPositiveButton("Применить",(d,w)->{try{String raw=hex.getText().toString().trim();int color=Color.parseColor(raw.startsWith("#")?raw:"#"+raw);prefs.edit().putInt("custom_accent",color).putString("accent","custom").apply();recreate();}catch(Exception e){toast("Неверный цвет. Пример: #7C4DFF");}}).show();
     }
     private void showSettings(){
         LinearLayout content=new LinearLayout(this);content.setOrientation(1);content.setPadding(22,8,22,4);
@@ -98,8 +108,15 @@ public class MainActivity extends Activity {
         String theme=getSharedPreferences(PREF_UI,MODE_PRIVATE).getString("theme","dark");
         TextView themeRow=label("Тема: "+("light".equals(theme)?"Светлая":"dark".equals(theme)?"Тёмная":"Как в системе"),16,text);themeRow.setPadding(0,14,0,14);content.addView(themeRow);
         themeRow.setOnClickListener(v->new AlertDialog.Builder(this).setTitle("Тема").setSingleChoiceItems(new String[]{"Как в системе","Тёмная","Светлая"}, "system".equals(getSharedPreferences(PREF_UI,0).getString("theme","dark"))?0:"dark".equals(getSharedPreferences(PREF_UI,0).getString("theme","dark"))?1:2,(d,w)->{getSharedPreferences(PREF_UI,0).edit().putString("theme",new String[]{"system","dark","light"}[w]).apply();d.dismiss();recreate();}).setNegativeButton("Отмена",null).show());
-        TextView accentRow=label("Акцентный цвет",16,text);accentRow.setPadding(0,14,0,14);content.addView(accentRow);
-        accentRow.setOnClickListener(v->new AlertDialog.Builder(this).setTitle("Акцентный цвет").setSingleChoiceItems(new String[]{"Лавандовый","Голубой","Зелёный","Розовый"},new String[]{"lavender","blue","green","pink"}[0].equals(getSharedPreferences(PREF_UI,0).getString("accent","lavender"))?0: "blue".equals(getSharedPreferences(PREF_UI,0).getString("accent","lavender"))?1:"green".equals(getSharedPreferences(PREF_UI,0).getString("accent","lavender"))?2:3,(d,w)->{getSharedPreferences(PREF_UI,0).edit().putString("accent",new String[]{"lavender","blue","green","pink"}[w]).apply();d.dismiss();recreate();}).setNegativeButton("Отмена",null).show());
+        TextView accentRow=label("Акцентный цвет",16,text);accentRow.setPadding(0,14,0,4);content.addView(accentRow);
+        TextView accentHint=label("Выбери готовый цвет или задай любой HEX/RGB",12,muted);content.addView(accentHint);
+        LinearLayout swatches=new LinearLayout(this);swatches.setGravity(Gravity.CENTER_VERTICAL);swatches.setPadding(0,dp(8),0,dp(4));content.addView(swatches);
+        int[] swatchColors={0xff7c4dff,0xff03a9f4,0xff00c853,0xffff4081,0xffff9800,0xffffeb3b,0xff00bcd4,0xfff5f5f5,0xff212121};
+        String[] swatchNames={"Лавандовый","Голубой","Зелёный","Розовый","Оранжевый","Жёлтый","Бирюзовый","Белый","Графитовый"};
+        for(int k=0;k<swatchColors.length;k++){final int color=swatchColors[k];TextView swatch=new TextView(this);swatch.setText(" ");swatch.setBackground(round(color,50));LinearLayout.LayoutParams sp=new LinearLayout.LayoutParams(0,dp(34),1);sp.setMargins(dp(2),0,dp(2),0);swatches.addView(swatch,sp);swatch.setOnClickListener(v->{getSharedPreferences(PREF_UI,0).edit().putInt("custom_accent",color).putString("accent","custom").apply();recreate();});}
+        TextView customColor=label("Задать свой цвет…",15,text);customColor.setPadding(0,dp(10),0,dp(10));content.addView(customColor);
+        customColor.setOnClickListener(v->showCustomColorDialog());
+        accentRow.setOnClickListener(v->showCustomColorDialog());
         if(Build.VERSION.SDK_INT>=31){Switch dynamic=new Switch(this);dynamic.setText("Цвета телефона (Android 12+)");dynamic.setTextColor(text);dynamic.setChecked(getSharedPreferences(PREF_UI,0).getBoolean("dynamic",false));content.addView(dynamic);dynamic.setOnCheckedChangeListener((b,checked)->getSharedPreferences(PREF_UI,0).edit().putBoolean("dynamic",checked).apply());}
         TextView glassTitle=label("ИНТЕРФЕЙС",12,lavender);glassTitle.setTypeface(null,1);glassTitle.setPadding(0,18,0,0);content.addView(glassTitle);
         Switch glass=new Switch(this);glass.setText("Стеклянные карточки");glass.setTextColor(text);glass.setChecked(getSharedPreferences(PREF_UI,MODE_PRIVATE).getBoolean("glass",true));content.addView(glass);glass.setOnCheckedChangeListener((b,checked)->getSharedPreferences(PREF_UI,MODE_PRIVATE).edit().putBoolean("glass",checked).apply());
