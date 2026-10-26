@@ -46,7 +46,7 @@ public class MainActivity extends Activity {
     private LinearLayout pageRoot;
     private final java.util.concurrent.ConcurrentHashMap<String,Integer> progress=new java.util.concurrent.ConcurrentHashMap<>();
     @Override public void onCreate(Bundle b){
-        super.onCreate(b); loadAppearance(); getWindow().setStatusBarColor(bg);getWindow().setNavigationBarColor(bg);
+        super.onCreate(b); try { loadAppearance(); getWindow().setStatusBarColor(bg);getWindow().setNavigationBarColor(bg);
         LinearLayout root=new LinearLayout(this);pageRoot=root;root.setOrientation(1);root.setPadding(16,12,16,6);GradientDrawable screenBg=new GradientDrawable(GradientDrawable.Orientation.TL_BR,new int[]{0xff161424,0xff0a0910});root.setBackground(getDrawable(com.vstore.app.R.drawable.bg_screen_gradient));
         LinearLayout top=new LinearLayout(this);top.setGravity(Gravity.CENTER_VERTICAL);
         isCreatorMode = getSharedPreferences(PREFS_AUTH, MODE_PRIVATE).getBoolean(PREF_CREATOR_MODE, false);
@@ -77,6 +77,44 @@ public class MainActivity extends Activity {
         makeTabs();loadCached();loadCatalog(false);
         headerTitle.setOnLongClickListener(v->{showCreatorTools();return true;});
         logCurrentCertificateSha256();
+        } catch (Throwable startupError) {
+            Log.e("VStoreStartup", "Startup initialization failed", startupError);
+            LinearLayout fallback = new LinearLayout(this);
+            fallback.setOrientation(LinearLayout.VERTICAL);
+            fallback.setGravity(Gravity.CENTER);
+            fallback.setPadding(32, 32, 32, 32);
+            fallback.setBackgroundColor(0xff0a0910);
+            TextView title = new TextView(this);
+            title.setText("V Store не смог запуститься");
+            title.setTextColor(0xfff6f0f8);
+            title.setTextSize(22);
+            title.setGravity(Gravity.CENTER);
+            fallback.addView(title, new LinearLayout.LayoutParams(-1, -2));
+            TextView details = new TextView(this);
+            String detail = startupError.getClass().getSimpleName();
+            if (startupError.getMessage() != null && !startupError.getMessage().trim().isEmpty()) {
+                detail += ": " + startupError.getMessage();
+            }
+            details.setText("Ошибка инициализации: " + detail + "\\nПодробности записаны в журнал VStoreStartup.");
+            details.setTextColor(0xffb9afc0);
+            details.setTextSize(14);
+            details.setGravity(Gravity.CENTER);
+            LinearLayout.LayoutParams dp = new LinearLayout.LayoutParams(-1, -2);
+            dp.topMargin = 20;
+            fallback.addView(details, dp);
+            TextView retry = new TextView(this);
+            retry.setText("Повторить запуск");
+            retry.setTextColor(0xffffffff);
+            retry.setTextSize(15);
+            retry.setGravity(Gravity.CENTER);
+            retry.setPadding(20, 14, 20, 14);
+            retry.setBackground(round(0xff7c4dff, 18));
+            LinearLayout.LayoutParams rp = new LinearLayout.LayoutParams(-1, -2);
+            rp.topMargin = 24;
+            fallback.addView(retry, rp);
+            retry.setOnClickListener(v -> recreate());
+            setContentView(fallback);
+        }
     }
 
     private void animateEntrance(View view,long delay){if(view==null)return;view.setAlpha(0f);view.setTranslationY(dp(18));view.animate().alpha(1f).translationY(0f).setStartDelay(delay).setDuration(Math.max(180,animationDuration)).setInterpolator(new android.view.animation.DecelerateInterpolator(1.5f)).start();}
