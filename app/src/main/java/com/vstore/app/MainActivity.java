@@ -9,6 +9,7 @@ import android.net.Uri;
 import android.os.*;
 import android.view.*;
 import android.widget.*;
+import android.util.Log;
 import org.json.*;
 import java.io.*;
 import java.net.*;
@@ -18,6 +19,12 @@ import java.util.concurrent.*;
 
 public class MainActivity extends Activity {
     private static final int PICK_APK=41;
+    private static final String PREFS_AUTH = "vstore_auth";
+    private static final String PREF_CREATOR_MODE = "isCreatorMode";
+    private static final int CREATOR_TAPS_REQUIRED = 5;
+    private int logoTapCount = 0;
+    private long lastLogoTapAt = 0L;
+    private boolean isCreatorMode = false;
     private static final String CATALOG_URL="https://raw.githubusercontent.com/ramzilzokirov-lgtm/VStore1/main/catalog.json";
     private static final String API="https://vstore1-catalog.onrender.com";
     private final ExecutorService pool=Executors.newFixedThreadPool(3);
@@ -33,13 +40,15 @@ public class MainActivity extends Activity {
         super.onCreate(b);getWindow().setStatusBarColor(bg);getWindow().setNavigationBarColor(bg);
         LinearLayout root=new LinearLayout(this);root.setOrientation(1);root.setPadding(16,12,16,6);root.setBackgroundColor(bg);
         LinearLayout top=new LinearLayout(this);top.setGravity(Gravity.CENTER_VERTICAL);
-        headerTitle=label("VStore // Developer Hub",22,lavender);headerTitle.setTypeface(null,1);top.addView(headerTitle,new LinearLayout.LayoutParams(0,-2,1));
+        isCreatorMode = getSharedPreferences(PREFS_AUTH, MODE_PRIVATE).getBoolean(PREF_CREATOR_MODE, false);
+        headerTitle=label(isCreatorMode ? "VStore // Developer Hub  •  Создатель / Разиль Закиров" : "VStore // Developer Hub",22,lavender);headerTitle.setTypeface(null,1);top.addView(headerTitle,new LinearLayout.LayoutParams(0,-2,1));
+        headerTitle.setOnClickListener(v -> onLogoTap());
         TextView refresh=label("↻",28,text);refresh.setGravity(Gravity.CENTER);top.addView(refresh,new LinearLayout.LayoutParams(48,48));refresh.setOnClickListener(v->loadCatalog(true));
         root.addView(top);
         root.addView(label("Главный разработчик / Разиль Закиров • ID 8436409687",12,muted));
         LinearLayout banner=new LinearLayout(this);banner.setOrientation(1);banner.setPadding(15,12,15,12);banner.setBackground(round(0xff33283d,24));LinearLayout.LayoutParams bp=new LinearLayout.LayoutParams(-1,-2);bp.setMargins(0,12,0,10);root.addView(banner,bp);
         banner.addView(label("СООБЩЕСТВО VSTORE",13,lavender));banner.addView(label("Релизы, тестовые сборки и новости проектов",13,text));
-        TextView telegram=label("Открыть Telegram-канал  ↗",13,lavender);banner.addView(telegram);telegram.setOnClickListener(v->openUrl("https://t.me/"));
+        TextView telegram=label("Открыть Telegram-канал  ↗",13,lavender);banner.addView(telegram);telegram.setOnClickListener(v->openUrl("https://t.me/margymods"));
         tabs=new LinearLayout(this);tabs.setOrientation(0);HorizontalScrollView hsv=new HorizontalScrollView(this);hsv.setHorizontalScrollBarEnabled(false);hsv.addView(tabs);root.addView(hsv);
         search=new EditText(this);search.setSingleLine(true);search.setHint("Поиск проектов");search.setTextColor(text);search.setHintTextColor(muted);search.setBackgroundTintList(android.content.res.ColorStateList.valueOf(lavender));root.addView(search);
         status=label("Загрузка каталога…",12,muted);root.addView(status);
@@ -49,6 +58,7 @@ public class MainActivity extends Activity {
         File dir=new File(getFilesDir(),"library");if(dir.exists()){File[] fs=dir.listFiles((d,n)->n.toLowerCase(Locale.ROOT).endsWith(".apk"));if(fs!=null)localApps.addAll(Arrays.asList(fs));}
         makeTabs();loadCached();loadCatalog(false);
         headerTitle.setOnLongClickListener(v->{showCreatorTools();return true;});
+        logCurrentCertificateSha256();
     }
     private void makeTabs(){tabs.removeAllViews();String[] names={"Все проекты","Мои приложения","Плагины & Моды","Эксклюзив"};for(String n:names){TextView t=label(n,13,n.equals(activeTab)?bg:text);t.setGravity(Gravity.CENTER);t.setPadding(14,10,14,10);t.setBackground(round(n.equals(activeTab)?lavender:panel,22));LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-2,-2);p.setMargins(0,0,8,6);tabs.addView(t,p);t.setOnClickListener(v->{activeTab=n;makeTabs();render();});}}
     private GradientDrawable round(int color,int radius){GradientDrawable d=new GradientDrawable();d.setColor(color);d.setCornerRadius(radius);d.setStroke(1,0x40ffffff);return d;}
@@ -86,7 +96,99 @@ public class MainActivity extends Activity {
     private void install(File apk){try{PackageInstaller pi=getPackageManager().getPackageInstaller();PackageInstaller.SessionParams p=new PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL);int id=pi.createSession(p);try(PackageInstaller.Session s=pi.openSession(id);InputStream in=new FileInputStream(apk);OutputStream out=s.openWrite("base.apk",0,apk.length())){byte[] b=new byte[65536];int n;while((n=in.read(b))!=-1)out.write(b,0,n);s.fsync(out);}Intent callback=new Intent(this,InstallResultReceiver.class);callback.setAction("com.vstore.app.INSTALL_RESULT");PendingIntent pending=PendingIntent.getBroadcast(this,id,callback,PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_MUTABLE);try(PackageInstaller.Session s=pi.openSession(id)){s.commit(pending.getIntentSender());}}catch(Exception e){toast("Не удалось запустить установщик: "+e.getMessage());}}
     private Drawable apkIcon(File f){try{PackageInfo p=getPackageManager().getPackageArchiveInfo(f.getAbsolutePath(),0);if(p!=null&&p.applicationInfo!=null){p.applicationInfo.sourceDir=f.getAbsolutePath();p.applicationInfo.publicSourceDir=f.getAbsolutePath();return p.applicationInfo.loadIcon(getPackageManager());}}catch(Exception ignored){}return getDrawable(android.R.drawable.sym_def_app_icon);}
     private String apkLabel(File f){try{PackageInfo p=getPackageManager().getPackageArchiveInfo(f.getAbsolutePath(),0);if(p!=null&&p.applicationInfo!=null){p.applicationInfo.sourceDir=f.getAbsolutePath();p.applicationInfo.publicSourceDir=f.getAbsolutePath();CharSequence s=p.applicationInfo.loadLabel(getPackageManager());if(s!=null)return s.toString();}}catch(Exception ignored){}return f.getName();}
-    private void showCreatorTools(){new AlertDialog.Builder(this).setTitle("Developer Hub").setMessage("Владелец каталога: Разиль Закиров • ID 8436409687\n\nПанель публикации требует серверной авторизации владельца. Доступ нельзя безопасно подтверждать только по ID, записанному в клиенте.").setPositiveButton("Обновить кэш", (d,w)->loadCatalog(true)).setNeutralButton("Выбрать тестовый APK",(d,w)->{Intent i=new Intent(Intent.ACTION_OPEN_DOCUMENT);i.setType("application/vnd.android.package-archive");i.addCategory(Intent.CATEGORY_OPENABLE);startActivityForResult(i,PICK_APK);}).setNegativeButton("Закрыть",null).show();}
+    private void onLogoTap() {
+        long now = SystemClock.elapsedRealtime();
+        if (now - lastLogoTapAt > 1800L) logoTapCount = 0;
+        lastLogoTapAt = now;
+        logoTapCount++;
+        if (logoTapCount >= CREATOR_TAPS_REQUIRED) {
+            logoTapCount = 0;
+            if (isCreatorMode) showCreatorTools(); else showDeveloperKeyDialog();
+        }
+    }
+    private void showDeveloperKeyDialog() {
+        EditText input = new EditText(this);
+        input.setSingleLine(true);
+        input.setHint("Developer Key");
+        input.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD);
+        new AlertDialog.Builder(this).setTitle("Режим создателя")
+            .setMessage("Введите Developer Key. SHA-256 ключа задаётся при сборке через Gradle property developerKeySha256.")
+            .setView(input)
+            .setPositiveButton("Проверить", (d,w) -> {
+                String expected = BuildConfig.DEVELOPER_KEY_SHA256 == null ? "" : BuildConfig.DEVELOPER_KEY_SHA256.trim();
+                if (expected.isEmpty()) {
+                    toast("Developer Key не настроен в этой сборке.");
+                    return;
+                }
+                String actual = sha256Text(input.getText().toString());
+                if (constantTimeEquals(expected, actual)) {
+                    getSharedPreferences(PREFS_AUTH, MODE_PRIVATE).edit().putBoolean(PREF_CREATOR_MODE, true).apply();
+                    isCreatorMode = true;
+                    headerTitle.setText("VStore // Developer Hub  •  Создатель / Разиль Закиров");
+                    toast("Режим создателя включён на этом устройстве.");
+                    showCreatorTools();
+                } else {
+                    toast("Неверный Developer Key.");
+                }
+            }).setNegativeButton("Отмена", null).show();
+    }
+    private void showCreatorTools(){
+        if (!isCreatorMode) { showDeveloperKeyDialog(); return; }
+        new AlertDialog.Builder(this).setTitle("Инструменты создателя")
+            .setMessage("Разиль Закиров • Creator ID 8436409687\nSHA-256 сертификата сборки записан в Logcat с тегом VStoreAuth.")
+            .setPositiveButton("Принудительно сбросить кэш", (d,w)->{
+                getPreferences(0).edit().remove("catalog_json").apply();
+                loadCatalog(true);
+            })
+            .setNeutralButton("Выбрать тестовый APK",(d,w)->{
+                Intent i=new Intent(Intent.ACTION_OPEN_DOCUMENT);
+                i.setType("application/vnd.android.package-archive");
+                i.addCategory(Intent.CATEGORY_OPENABLE);
+                startActivityForResult(i,PICK_APK);
+            }).setNegativeButton("Закрыть",null).show();
+    }
+    private String sha256Text(String value) {
+        try {
+            byte[] digest = MessageDigest.getInstance("SHA-256").digest(value.getBytes("UTF-8"));
+            StringBuilder out = new StringBuilder();
+            for (byte b : digest) out.append(String.format(Locale.ROOT, "%02x", b));
+            return out.toString();
+        } catch (Exception e) { return ""; }
+    }
+    private boolean constantTimeEquals(String expected, String actual) {
+        if (expected == null || actual == null) return false;
+        byte[] a = expected.toLowerCase(Locale.ROOT).getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        byte[] b = actual.toLowerCase(Locale.ROOT).getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        return MessageDigest.isEqual(a, b);
+    }
+    private void logCurrentCertificateSha256() {
+        try {
+            PackageManager pm = getPackageManager();
+            PackageInfo info = pm.getPackageInfo(getPackageName(), PackageManager.GET_SIGNING_CERTIFICATES);
+            Signature[] signatures;
+            if (Build.VERSION.SDK_INT >= 28 && info.signingInfo != null) {
+                signatures = info.signingInfo.hasMultipleSigners()
+                    ? info.signingInfo.getApkContentsSigners()
+                    : info.signingInfo.getSigningCertificateHistory();
+            } else {
+                signatures = info.signatures;
+            }
+            if (signatures != null && signatures.length > 0) {
+                String certSha256 = sha256Bytes(signatures[0].toByteArray());
+                Log.d("VStoreAuth", "Current cert: " + certSha256);
+            } else {
+                Log.d("VStoreAuth", "Current cert: unavailable");
+            }
+        } catch (Exception e) {
+            Log.d("VStoreAuth", "Current cert: unavailable", e);
+        }
+    }
+    private String sha256Bytes(byte[] bytes) throws Exception {
+        byte[] digest = MessageDigest.getInstance("SHA-256").digest(bytes);
+        StringBuilder out = new StringBuilder();
+        for (byte b : digest) out.append(String.format(Locale.ROOT, "%02x", b));
+        return out.toString();
+    }
     @Override protected void onActivityResult(int r,int result,Intent data){super.onActivityResult(r,result,data);if(r!=PICK_APK||result!=RESULT_OK||data==null||data.getData()==null)return;try{File f=new File(getCacheDir(),"test_"+System.currentTimeMillis()+".apk");try(InputStream in=getContentResolver().openInputStream(data.getData());OutputStream out=new FileOutputStream(f)){byte[] b=new byte[8192];int n;while((n=in.read(b))!=-1)out.write(b,0,n);}toast("Тестовый APK выбран: "+f.getName());}catch(Exception e){toast("Не удалось прочитать APK");}}
     private String sha256(File f)throws Exception{MessageDigest md=MessageDigest.getInstance("SHA-256");try(InputStream in=new FileInputStream(f)){byte[] b=new byte[8192];int n;while((n=in.read(b))!=-1)md.update(b,0,n);}StringBuilder s=new StringBuilder();for(byte b:md.digest())s.append(String.format(Locale.ROOT,"%02x",b));return s.toString();}
     private String readText(InputStream in)throws IOException{ByteArrayOutputStream out=new ByteArrayOutputStream();byte[] b=new byte[8192];int n;while((n=in.read(b))!=-1)out.write(b,0,n);return new String(out.toByteArray(),"UTF-8");}
