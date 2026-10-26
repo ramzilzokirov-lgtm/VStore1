@@ -1,0 +1,2 @@
+-keep class com.vstore.app.InstallResultReceiver { *; }
+-keepattributes Signature,*Annotation*
