@@ -21,6 +21,38 @@ jobs:
           packages: 'platform-tools platforms;android-35 build-tools;35.0.0'
       - name: Build debug APK
         run: gradle --no-daemon assembleDebug
+      - name: Launch app on Android emulator
+        id: smoke
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          target: google_apis
+          emulator-options: -no-window -no-audio -no-boot-anim -camera-back none
+          disable-animations: true
+          script: |
+            set -eu
+            mkdir -p artifacts
+            adb install -r app/build/outputs/apk/debug/app-debug.apk
+            adb logcat -c
+            adb shell am force-stop com.vstore.app || true
+            adb shell monkey -p com.vstore.app 1
+            sleep 15
+            if ! adb shell pidof com.vstore.app >/dev/null 2>&1; then
+              adb logcat -d -v threadtime > artifacts/vstore-startup-logcat.txt
+              echo "V Store process exited after launch. Logcat saved."
+              grep -n -A 80 -B 20 -E 'FATAL EXCEPTION|AndroidRuntime|VStoreStartup|Process: com.vstore.app' artifacts/vstore-startup-logcat.txt || true
+              exit 1
+            fi
+            adb logcat -d -v threadtime > artifacts/vstore-startup-logcat.txt
+            echo "V Store process remained alive for 15 seconds."
+      - name: Upload startup diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v-store-startup-diagnostics
+          path: artifacts/vstore-startup-logcat.txt
+          if-no-files-found: ignore
       - name: Build optimized release APK
         run: gradle --no-daemon assembleRelease
       - name: Calculate APK checksums
