@@ -113,15 +113,14 @@ public class MainActivity extends Activity {
         input.setHint("Developer Key");
         input.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD);
         new AlertDialog.Builder(this).setTitle("Режим создателя")
-            .setMessage("Введите Developer Key. Если ключ не задан при сборке, используется резервный мастер-пароль.")
+            .setMessage("Введите Developer Key, заданный при сборке приложения. Если ключ не настроен, режим создателя недоступен.")
             .setView(input)
             .setPositiveButton("Проверить", (d,w) -> {
                 String expected = BuildConfig.DEVELOPER_KEY_SHA256 == null ? "" : BuildConfig.DEVELOPER_KEY_SHA256.trim();
                 String entered = input.getText().toString();
                 String actual = sha256Text(entered);
-                boolean valid = expected.isEmpty()
-                    ? constantTimeEquals("vgram2026", entered)
-                    : constantTimeEquals(expected, actual);
+                boolean valid = !entered.isEmpty() && !expected.isEmpty()
+                    && constantTimeEquals(expected, actual);
                 if (valid) {
                     getSharedPreferences(PREFS_AUTH, MODE_PRIVATE).edit().putBoolean(PREF_CREATOR_MODE, true).apply();
                     isCreatorMode = true;
