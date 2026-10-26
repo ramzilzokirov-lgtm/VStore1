@@ -47,7 +47,7 @@ public class MainActivity extends Activity {
     private final HashMap<String,Integer> progress=new HashMap<>();
     @Override public void onCreate(Bundle b){
         super.onCreate(b); loadAppearance(); getWindow().setStatusBarColor(bg);getWindow().setNavigationBarColor(bg);
-        LinearLayout root=new LinearLayout(this);pageRoot=root;root.setOrientation(1);root.setPadding(16,12,16,6);GradientDrawable screenBg=new GradientDrawable(GradientDrawable.Orientation.TL_BR,new int[]{0xff161424,0xff0a0910});root.setBackground(screenBg);
+        LinearLayout root=new LinearLayout(this);pageRoot=root;root.setOrientation(1);root.setPadding(16,12,16,6);GradientDrawable screenBg=new GradientDrawable(GradientDrawable.Orientation.TL_BR,new int[]{0xff161424,0xff0a0910});root.setBackground(getDrawable(com.vstore.app.R.drawable.bg_screen_gradient));
         LinearLayout top=new LinearLayout(this);top.setGravity(Gravity.CENTER_VERTICAL);
         isCreatorMode = getSharedPreferences(PREFS_AUTH, MODE_PRIVATE).getBoolean(PREF_CREATOR_MODE, false);
         headerTitle=label("VStore",28,lavender);headerTitle.setTypeface(null,1);top.addView(headerTitle,new LinearLayout.LayoutParams(0,-2,1));
@@ -60,7 +60,7 @@ public class MainActivity extends Activity {
         MaterialCardView hero=new MaterialCardView(this);hero.setRadius(dp(24));hero.setCardElevation(0);hero.setStrokeWidth(dp(1));hero.setStrokeColor(0x30ffffff);hero.setCardBackgroundColor(0x1affffff);hero.setUseCompatPadding(false);hero.setContentPadding(dp(16),dp(14),dp(16),dp(14));LinearLayout.LayoutParams hp=new LinearLayout.LayoutParams(-1,-2);hp.setMargins(0,dp(12),0,dp(10));root.addView(hero,hp);
         LinearLayout heroBody=new LinearLayout(this);heroBody.setOrientation(1);hero.addView(heroBody);
         LinearLayout heroHead=new LinearLayout(this);heroHead.setGravity(Gravity.CENTER_VERTICAL);heroBody.addView(heroHead);
-        TextView tgIcon=label("➤",24,0xffffffff);tgIcon.setGravity(Gravity.CENTER);GradientDrawable tgBg=new GradientDrawable(GradientDrawable.Orientation.TL_BR,new int[]{0xff7c4dff,0xff3478f6});tgBg.setShape(GradientDrawable.OVAL);tgIcon.setBackground(tgBg);heroHead.addView(tgIcon,new LinearLayout.LayoutParams(dp(44),dp(44)));
+        ImageView tgIcon=new ImageView(this);GradientDrawable tgBg=new GradientDrawable(GradientDrawable.Orientation.TL_BR,new int[]{0xff7c4dff,0xff3478f6});tgBg.setShape(GradientDrawable.OVAL);tgIcon.setBackground(tgBg);tgIcon.setImageDrawable(getDrawable(com.vstore.app.R.drawable.ic_telegram_white));tgIcon.setScaleType(ImageView.ScaleType.CENTER_INSIDE);tgIcon.setPadding(dp(10),dp(10),dp(10),dp(10));heroHead.addView(tgIcon,new LinearLayout.LayoutParams(dp(44),dp(44)));
         TextView heroTitle=label("Канал в Telegram // VGRAM INSIDER",16,text);LinearLayout.LayoutParams htp=new LinearLayout.LayoutParams(0,-2,1);htp.leftMargin=dp(12);heroHead.addView(heroTitle,htp);
         TextView heroSub=label("Новости, обновления модов и плагины: @Vmods2",13,muted);LinearLayout.LayoutParams hsp=new LinearLayout.LayoutParams(-1,-2);hsp.topMargin=dp(10);heroBody.addView(heroSub,hsp);
         TextView telegram=label("Открыть Telegram-канал  ↗",14,lavender);LinearLayout.LayoutParams tlp=new LinearLayout.LayoutParams(-1,-2);tlp.topMargin=dp(4);heroBody.addView(telegram,tlp);hero.setOnClickListener(v->openUrl("https://t.me/Vmods2"));telegram.setOnClickListener(v->openUrl("https://t.me/Vmods2"));
