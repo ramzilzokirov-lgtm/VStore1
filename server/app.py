@@ -2,6 +2,7 @@ import hashlib
 import os
 import sqlite3
 import uuid
+import hmac
 from pathlib import Path
 from flask import Flask, jsonify, request, send_from_directory, abort
 
@@ -44,6 +45,12 @@ def list_apps():
 
 @app.post("/api/apps")
 def publish_app():
+    expected_token = os.environ.get("VSTORE_PUBLISH_TOKEN", "").strip()
+    supplied_token = request.headers.get("X-VSTORE-PUBLISH-TOKEN", "").strip()
+    if not expected_token:
+        return jsonify({"error": "Публикация отключена: VSTORE_PUBLISH_TOKEN не настроен"}), 503
+    if not supplied_token or not hmac.compare_digest(expected_token, supplied_token):
+        return jsonify({"error": "Требуется авторизация автора"}), 401
     uploaded = request.files.get("apk")
     name = request.form.get("name", "").strip()
     description = request.form.get("description", "").strip()[:1000]
@@ -70,6 +77,10 @@ def publish_app():
             digest.update(chunk)
             out.write(chunk)
     try:
+        with path.open("rb") as check:
+            if check.read(4) != b"PK\\x03\\x04":
+                path.unlink(missing_ok=True)
+                return jsonify({"error": "Файл не похож на APK/ZIP"}), 400
         with connect() as con:
             con.execute("INSERT INTO apps(id,name,package_name,version_name,size,sha256,filename,description) VALUES(?,?,?,?,?,?,?,?)",
                         (app_id, name, package_name, version_name, size, digest.hexdigest(), filename, description))
