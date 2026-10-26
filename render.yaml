@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: vstore1-catalog
+    runtime: python
+    plan: free
+    region: frankfurt
+    buildCommand: pip install -r server/requirements.txt
+    startCommand: gunicorn server.app:app --bind 0.0.0.0:$PORT --workers 1 --timeout 120
+    healthCheckPath: /health
+    disk:
+      name: vstore-catalog-data
+      mountPath: /var/data
+      sizeGB: 1
