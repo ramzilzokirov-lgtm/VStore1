@@ -8,6 +8,8 @@ import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.widget.ProgressBar;
+import java.util.Map;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.DiffUtil;
 import androidx.recyclerview.widget.ListAdapter;
@@ -19,11 +21,12 @@ public final class VStoreAdapter extends ListAdapter<VStoreAppItem,VStoreAdapter
     public interface ItemAction { void onAction(VStoreAppItem item); }
     private final Context context;
     private final ItemAction onDetails, onDownload;
+    private final Map<String,Integer> progress;
     private final int textColor=0xfff6f0f8, mutedColor=0xffb9afc0, accent=0xff7c4dff;
 
-    public VStoreAdapter(Context context, ItemAction onDetails, ItemAction onDownload) {
+    public VStoreAdapter(Context context, ItemAction onDetails, ItemAction onDownload, Map<String,Integer> progress) {
         super(DIFF);
-        this.context=context; this.onDetails=onDetails; this.onDownload=onDownload;
+        this.context=context; this.onDetails=onDetails; this.onDownload=onDownload; this.progress=progress;
     }
     private static final DiffUtil.ItemCallback<VStoreAppItem> DIFF=new DiffUtil.ItemCallback<VStoreAppItem>() {
         @Override public boolean areItemsTheSame(@NonNull VStoreAppItem a,@NonNull VStoreAppItem b){return a.id.equals(b.id);}
@@ -52,10 +55,11 @@ public final class VStoreAdapter extends ListAdapter<VStoreAppItem,VStoreAdapter
         TextView description=label("",13,textColor);description.setMaxLines(2);description.setEllipsize(android.text.TextUtils.TruncateAt.END);
         LinearLayout.LayoutParams descParams=new LinearLayout.LayoutParams(-1,-2);descParams.topMargin=dp(compact?5:9);body.addView(description,descParams);
         if(compact){icon.getLayoutParams().width=dp(44);icon.getLayoutParams().height=dp(44);description.setMaxLines(1);}
+        ProgressBar progressBar=new ProgressBar(context,null,android.R.attr.progressBarStyleHorizontal);progressBar.setMax(100);progressBar.setIndeterminate(true);progressBar.setVisibility(View.GONE);LinearLayout.LayoutParams pp=new LinearLayout.LayoutParams(-1,dp(4));pp.topMargin=dp(8);body.addView(progressBar,pp);
         MaterialButton action=new MaterialButton(context);action.setCornerRadius(dp(18));action.setMinHeight(dp(40));action.setMinimumHeight(dp(40));
         action.setTextSize(12);action.setTypeface(null,1);action.setInsetTop(0);action.setInsetBottom(0);
         LinearLayout.LayoutParams ap=new LinearLayout.LayoutParams(-2,dp(40));ap.topMargin=dp(10);body.addView(action,ap);
-        return new Holder(card,icon,title,version,description,action);
+        return new Holder(card,icon,title,version,description,action,progressBar);
     }
     @Override public void onBindViewHolder(@NonNull Holder h,int position) {
         VStoreAppItem item=getItem(position);
@@ -64,8 +68,10 @@ public final class VStoreAdapter extends ListAdapter<VStoreAppItem,VStoreAdapter
         h.description.setText(item.description);
         if(item.id.toLowerCase(java.util.Locale.ROOT).contains("vgram")||item.name.toLowerCase(java.util.Locale.ROOT).contains("vgram"))h.icon.setImageResource(R.drawable.ic_vgram);else if(item.id.toLowerCase(java.util.Locale.ROOT).contains("vtok")||item.name.toLowerCase(java.util.Locale.ROOT).equals("vtok"))h.icon.setImageResource(R.drawable.ic_vtok);else try { if(item.packageName!=null&&!item.packageName.isEmpty()){android.content.pm.ApplicationInfo info=context.getPackageManager().getApplicationInfo(item.packageName,0);h.icon.setImageDrawable(context.getPackageManager().getApplicationIcon(info));} else h.icon.setImageResource(R.drawable.ic_app_default); } catch(Exception ignored){h.icon.setImageResource(R.drawable.ic_app_default);}
         boolean ready=item.downloadUrl!=null&&!item.downloadUrl.isEmpty();
-        h.action.setText(ready?"СКАЧАТЬ":"В РАЗРАБОТКЕ");
-        h.action.setEnabled(ready);
+        Integer pct=progress.get(item.id);boolean downloading=pct!=null;
+        h.progressBar.setVisibility(downloading?View.VISIBLE:View.GONE);h.progressBar.setIndeterminate(pct==0);if(pct!=null&&pct>0)h.progressBar.setProgress(pct);
+        h.action.setText(downloading?(pct>0?"СКАЧИВАЕТСЯ "+pct+"%":"ПОДКЛЮЧЕНИЕ…"):(ready?"СКАЧАТЬ":"В РАЗРАБОТКЕ"));
+        h.action.setEnabled(ready&&!downloading);
         h.action.setAlpha(ready?1f:0.58f);
         h.action.setBackgroundTintList(android.content.res.ColorStateList.valueOf(ready?accent:0xff55515d));
         h.action.setTextColor(ready?0xffffffff:0xffc7c2cc);
@@ -75,7 +81,7 @@ public final class VStoreAdapter extends ListAdapter<VStoreAppItem,VStoreAdapter
     private TextView label(String s,int size,int color){TextView t=new TextView(context);t.setText(s);t.setTextSize(size);t.setTextColor(color);return t;}
     private int dp(float n){return (int)(n*context.getResources().getDisplayMetrics().density+0.5f);}
     static final class Holder extends RecyclerView.ViewHolder {
-        final MaterialCardView card;final ImageView icon;final TextView title,version,description;final MaterialButton action;
-        Holder(MaterialCardView c,ImageView i,TextView t,TextView v,TextView d,MaterialButton a){super(c);card=c;icon=i;title=t;version=v;description=d;action=a;}
+        final MaterialCardView card;final ImageView icon;final TextView title,version,description;final MaterialButton action;final ProgressBar progressBar;
+        Holder(MaterialCardView c,ImageView i,TextView t,TextView v,TextView d,MaterialButton a,ProgressBar p){super(c);card=c;icon=i;title=t;version=v;description=d;action=a;progressBar=p;}
     }
 }
