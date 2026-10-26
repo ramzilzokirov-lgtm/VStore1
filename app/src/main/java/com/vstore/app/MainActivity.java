@@ -50,15 +50,15 @@ public class MainActivity extends Activity {
         LinearLayout root=new LinearLayout(this);pageRoot=root;root.setOrientation(1);root.setPadding(16,12,16,6);GradientDrawable screenBg=new GradientDrawable(GradientDrawable.Orientation.TL_BR,new int[]{0xff161424,0xff0a0910});root.setBackground(screenBg);
         LinearLayout top=new LinearLayout(this);top.setGravity(Gravity.CENTER_VERTICAL);
         isCreatorMode = getSharedPreferences(PREFS_AUTH, MODE_PRIVATE).getBoolean(PREF_CREATOR_MODE, false);
-        headerTitle=label(isCreatorMode ? "VStore  •  Создатель" : "VStore",28,lavender);headerTitle.setTypeface(null,1);top.addView(headerTitle,new LinearLayout.LayoutParams(0,-2,1));
+        headerTitle=label("VStore",28,lavender);headerTitle.setTypeface(null,1);top.addView(headerTitle,new LinearLayout.LayoutParams(0,-2,1));
         headerTitle.setOnClickListener(v -> onLogoTap());
         TextView settings=label("⚙",25,text);settings.setGravity(Gravity.CENTER);top.addView(settings,new LinearLayout.LayoutParams(44,48));settings.setOnClickListener(v->showSettings());
         TextView refresh=label("↻",28,text);refresh.setGravity(Gravity.CENTER);top.addView(refresh,new LinearLayout.LayoutParams(44,48));refresh.setOnClickListener(v->loadCatalog(true));
         root.addView(top);
-        root.addView(label("Главный разработчик: Разиль Закиров (ID: 8436409687)",12,muted));
+        
         LinearLayout banner=new LinearLayout(this);banner.setOrientation(1);banner.setPadding(15,12,15,12);banner.setBackground(round(0x1affffff,24));LinearLayout.LayoutParams bp=new LinearLayout.LayoutParams(-1,-2);bp.setMargins(0,12,0,10);root.addView(banner,bp);
-        banner.addView(label("✈",28,lavender));banner.addView(label("Канал в Telegram // VGRAM INSIDER",16,text));banner.addView(label("Новости, обновления модов и плагины: @margymods",13,muted));
-        TextView telegram=label("Открыть Telegram-канал  ↗",13,lavender);banner.addView(telegram);telegram.setOnClickListener(v->openUrl("https://t.me/margymods"));
+        banner.addView(label("✈",28,lavender));banner.addView(label("Telegram // @Money_fun",16,text));banner.addView(label("Новости, обновления модов и плагины",13,muted));
+        TextView telegram=label("Открыть Telegram-канал  ↗",13,lavender);banner.addView(telegram);telegram.setOnClickListener(v->openUrl("https://t.me/Money_fun"));
         TextView importApk=label("＋ Импортировать APK",14,lavender);importApk.setPadding(4,10,4,10);root.addView(importApk);importApk.setOnClickListener(v->{Intent pick=new Intent(Intent.ACTION_OPEN_DOCUMENT);pick.setType("application/vnd.android.package-archive");pick.addCategory(Intent.CATEGORY_OPENABLE);startActivityForResult(pick,PICK_APK);});
         tabs=new LinearLayout(this);tabs.setOrientation(0);HorizontalScrollView hsv=new HorizontalScrollView(this);hsv.setHorizontalScrollBarEnabled(false);hsv.addView(tabs);root.addView(hsv);
         search=new EditText(this);search.setSingleLine(true);search.setHint("Поиск модов и приложений...");search.setTextColor(text);search.setHintTextColor(muted);search.setPadding(18,12,18,12);search.setBackground(round(0x1affffff,28));root.addView(search);
