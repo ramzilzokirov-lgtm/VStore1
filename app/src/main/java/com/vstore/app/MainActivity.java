@@ -9,6 +9,9 @@ import android.net.Uri;
 import android.os.*;
 import android.view.*;
 import android.widget.*;
+import com.google.android.material.card.MaterialCardView;
+import com.google.android.material.button.MaterialButton;
+import com.google.android.material.search.SearchBar;
 import android.util.Log;
 import org.json.*;
 import java.io.*;
@@ -34,28 +37,28 @@ public class MainActivity extends Activity {
     private EditText search;
     private TextView status, headerTitle;
     private String activeTab="Все проекты";
-    private int bg=0xff111116, lavender=0xffd7b9e8, text=0xfff6f0f8, muted=0xffb9afc0, panel=0xff27232d;
+    private int bg=0xff0a0910, lavender=0xff7c4dff, text=0xfff6f0f8, muted=0xffb9afc0, panel=0x1affffff;
     private int animationDuration=260;
     private static final String PREF_UI="vstore_ui";
     private LinearLayout pageRoot;
     private final HashMap<String,Integer> progress=new HashMap<>();
     @Override public void onCreate(Bundle b){
         super.onCreate(b); loadAppearance(); getWindow().setStatusBarColor(bg);getWindow().setNavigationBarColor(bg);
-        LinearLayout root=new LinearLayout(this);pageRoot=root;root.setOrientation(1);root.setPadding(16,12,16,6);root.setBackgroundColor(bg);
+        LinearLayout root=new LinearLayout(this);pageRoot=root;root.setOrientation(1);root.setPadding(16,12,16,6);GradientDrawable screenBg=new GradientDrawable(GradientDrawable.Orientation.TL_BR,new int[]{0xff161424,0xff0a0910});root.setBackground(screenBg);
         LinearLayout top=new LinearLayout(this);top.setGravity(Gravity.CENTER_VERTICAL);
         isCreatorMode = getSharedPreferences(PREFS_AUTH, MODE_PRIVATE).getBoolean(PREF_CREATOR_MODE, false);
-        headerTitle=label(isCreatorMode ? "VStore // Developer Hub  •  Создатель / Разиль Закиров" : "VStore // Developer Hub",22,lavender);headerTitle.setTypeface(null,1);top.addView(headerTitle,new LinearLayout.LayoutParams(0,-2,1));
+        headerTitle=label(isCreatorMode ? "VStore  •  Создатель" : "VStore",28,lavender);headerTitle.setTypeface(null,1);top.addView(headerTitle,new LinearLayout.LayoutParams(0,-2,1));
         headerTitle.setOnClickListener(v -> onLogoTap());
         TextView settings=label("⚙",25,text);settings.setGravity(Gravity.CENTER);top.addView(settings,new LinearLayout.LayoutParams(44,48));settings.setOnClickListener(v->showSettings());
         TextView refresh=label("↻",28,text);refresh.setGravity(Gravity.CENTER);top.addView(refresh,new LinearLayout.LayoutParams(44,48));refresh.setOnClickListener(v->loadCatalog(true));
         root.addView(top);
-        root.addView(label("Главный разработчик / Разиль Закиров • ID 8436409687",12,muted));
-        LinearLayout banner=new LinearLayout(this);banner.setOrientation(1);banner.setPadding(15,12,15,12);banner.setBackground(round(0xff33283d,24));LinearLayout.LayoutParams bp=new LinearLayout.LayoutParams(-1,-2);bp.setMargins(0,12,0,10);root.addView(banner,bp);
-        banner.addView(label("СООБЩЕСТВО VSTORE",13,lavender));banner.addView(label("Релизы, тестовые сборки и новости проектов",13,text));
-        TextView telegram=label("Открыть Telegram-канал  ↗",13,lavender);banner.addView(telegram);telegram.setOnClickListener(v->openUrl("https://t.me/Vmods2"));
+        root.addView(label("Главный разработчик: Разиль Закиров (ID: 8436409687)",12,muted));
+        LinearLayout banner=new LinearLayout(this);banner.setOrientation(1);banner.setPadding(15,12,15,12);banner.setBackground(round(0x1affffff,24));LinearLayout.LayoutParams bp=new LinearLayout.LayoutParams(-1,-2);bp.setMargins(0,12,0,10);root.addView(banner,bp);
+        banner.addView(label("✈",28,lavender));banner.addView(label("Канал в Telegram // VGRAM INSIDER",16,text));banner.addView(label("Новости, обновления модов и плагины: @margymods",13,muted));
+        TextView telegram=label("Открыть Telegram-канал  ↗",13,lavender);banner.addView(telegram);telegram.setOnClickListener(v->openUrl("https://t.me/margymods"));
         TextView importApk=label("＋ Импортировать APK",14,lavender);importApk.setPadding(4,10,4,10);root.addView(importApk);importApk.setOnClickListener(v->{Intent pick=new Intent(Intent.ACTION_OPEN_DOCUMENT);pick.setType("application/vnd.android.package-archive");pick.addCategory(Intent.CATEGORY_OPENABLE);startActivityForResult(pick,PICK_APK);});
         tabs=new LinearLayout(this);tabs.setOrientation(0);HorizontalScrollView hsv=new HorizontalScrollView(this);hsv.setHorizontalScrollBarEnabled(false);hsv.addView(tabs);root.addView(hsv);
-        search=new EditText(this);search.setSingleLine(true);search.setHint("Поиск проектов");search.setTextColor(text);search.setHintTextColor(muted);search.setBackgroundTintList(android.content.res.ColorStateList.valueOf(lavender));root.addView(search);
+        search=new EditText(this);search.setSingleLine(true);search.setHint("Поиск модов и приложений...");search.setTextColor(text);search.setHintTextColor(muted);search.setPadding(18,12,18,12);search.setBackground(round(0x1affffff,28));root.addView(search);
         status=label("Загрузка каталога…",12,muted);root.addView(status);
         ScrollView sc=new ScrollView(this);list=new LinearLayout(this);list.setOrientation(1);sc.addView(list);root.addView(sc,new LinearLayout.LayoutParams(-1,0,1));
         setContentView(root); if(animationDuration>0){root.setAlpha(0f);root.setTranslationY(18f);root.animate().alpha(1f).translationY(0f).setDuration(animationDuration+120L).start();}
@@ -92,7 +95,8 @@ public class MainActivity extends Activity {
         new AlertDialog.Builder(this).setTitle("Настройки").setView(content).setPositiveButton("Применить",(d,w)->recreate()).setNegativeButton("Закрыть",null).show();
     }
     private void makeTabs(){tabs.removeAllViews();String[] names={"Все проекты","Мои приложения","Плагины & Моды","Эксклюзив"};for(String n:names){TextView t=label(n,13,n.equals(activeTab)?bg:text);t.setGravity(Gravity.CENTER);t.setPadding(14,10,14,10);t.setBackground(round(n.equals(activeTab)?lavender:panel,22));LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-2,-2);p.setMargins(0,0,8,6);tabs.addView(t,p);t.setOnClickListener(v->{activeTab=n;makeTabs();render();});}}
-    private GradientDrawable round(int color,int radius){GradientDrawable d=new GradientDrawable();d.setColor(color);d.setCornerRadius(radius);d.setStroke(1,0x40ffffff);return d;}
+    private int dp(float value){return (int)(value*getResources().getDisplayMetrics().density+0.5f);}
+    private GradientDrawable round(int color,int radius){GradientDrawable d=new GradientDrawable();d.setColor(color);d.setCornerRadius(dp(radius));d.setStroke(dp(1),0x33ffffff);return d;}
     private TextView label(String s,int size,int color){TextView t=new TextView(this);t.setText(s);t.setTextSize(size);t.setTextColor(color);t.setPadding(0,3,0,3);return t;}
     private void loadCached(){String raw=getPreferences(0).getString("catalog_json","");if(!raw.isEmpty())try{applyCatalog(new JSONObject(raw),false);}catch(Exception ignored){}}
     private void loadCatalog(boolean force){
@@ -121,18 +125,18 @@ public class MainActivity extends Activity {
     private LinearLayout card(){LinearLayout c=new LinearLayout(this);c.setOrientation(1);c.setPadding(15,13,15,13);c.setBackground(round(panel,24));LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,-2);p.setMargins(0,7,0,7);addSafe(list,c,p);if(animationDuration>0){c.setAlpha(0f);c.setTranslationY(12f);c.animate().alpha(1f).translationY(0f).setDuration(animationDuration).start();}return c;}
     private void addSafe(ViewGroup parent,View child,ViewGroup.LayoutParams params){if(child.getParent()!=null){ViewParent old=child.getParent();if(old instanceof ViewGroup)((ViewGroup)old).removeView(child);}parent.addView(child,params);}
     private void appCard(JSONObject a){LinearLayout c=card();LinearLayout row=new LinearLayout(this);row.setGravity(Gravity.CENTER_VERTICAL);c.addView(row);
-        ImageView icon=new ImageView(this);icon.setImageDrawable(getDrawable(android.R.drawable.sym_def_app_icon));icon.setBackground(round(0xff393140,16));icon.setClipToOutline(true);row.addView(icon,new LinearLayout.LayoutParams(48,48));
+        ImageView icon=new ImageView(this);icon.setImageDrawable(getDrawable(android.R.drawable.sym_def_app_icon));icon.setBackground(round(0x26ffffff,16));icon.setClipToOutline(true);row.addView(icon,new LinearLayout.LayoutParams(dp(56),dp(56)));
         String iconUrl=a.optString("icon_url","");if(!iconUrl.isEmpty())loadIcon(iconUrl,icon);
         LinearLayout col=new LinearLayout(this);col.setOrientation(1);col.setPadding(12,0,0,0);row.addView(col,new LinearLayout.LayoutParams(0,-2,1));
         LinearLayout nameRow=new LinearLayout(this);nameRow.setGravity(Gravity.CENTER_VERTICAL);col.addView(nameRow);TextView name=label(a.optString("name","Project"),16,text);name.setTypeface(null,1);nameRow.addView(name);String badge=a.optString("badge","");if(!badge.isEmpty()){TextView b=label(" "+badge+" ",10,bg);b.setBackground(round(lavender,8));LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-2,-2);p.setMargins(7,0,0,0);nameRow.addView(b,p);}
-        col.addView(label(a.optString("category","Apps")+" • "+a.optString("version",""),11,muted));
-        TextView description=label(a.optString("description",""),13,text);c.addView(description);c.setOnClickListener(v->showAppDetails(a));
+        TextView versionChip=label("v"+a.optString("version",""),11,text);versionChip.setPadding(8,3,8,3);versionChip.setBackground(round(0x26ffffff,12));nameRow.addView(versionChip);
+        TextView description=label(a.optString("description",""),13,text);description.setMaxLines(2);description.setEllipsize(android.text.TextUtils.TruncateAt.END);description.setPadding(0,8,0,6);c.addView(description);c.setOnClickListener(v->showAppDetails(a));
         String id=a.optString("id");Integer pr=progress.get(id);if(pr!=null&&pr>=0&&pr<100){ProgressBar bar=new ProgressBar(this,null,android.R.attr.progressBarStyleHorizontal);bar.setMax(100);bar.setProgress(pr);c.addView(bar);c.addView(label("Загрузка "+pr+"%",11,lavender));}
         LinearLayout actions=new LinearLayout(this);actions.setGravity(Gravity.CENTER_VERTICAL);c.addView(actions);
         String pkg=a.optString("package_name","");boolean installed=!pkg.isEmpty()&&installed(pkg);String url=a.optString("download_url","");
         String action=installed?"ОБНОВИТЬ":(url.isEmpty()?"НЕТ APK":"СКАЧАТЬ");
-        TextView button=label(action,13,bg);button.setTypeface(null,1);button.setGravity(Gravity.CENTER);button.setPadding(20,11,20,11);button.setBackground(round(url.isEmpty()?0xff615967:lavender,18));actions.addView(button);button.setOnClickListener(v->{if(url.isEmpty()){toast("Для этого проекта ещё не опубликована ссылка на APK.");return;}download(a);});
-        TextView version=label("  SHA-256 "+shortHash(a.optString("sha256","")),10,muted);actions.addView(version);
+        MaterialButton button=new MaterialButton(this);button.setText(action);button.setTextSize(12);button.setTypeface(null,1);button.setCornerRadius(dp(18));button.setMinHeight(dp(40));button.setMinimumHeight(dp(40));button.setPadding(dp(18),0,dp(18),0);button.setBackgroundTintList(android.content.res.ColorStateList.valueOf(url.isEmpty()?0xff55515d:lavender));button.setTextColor(url.isEmpty()?0xffb7b1be:0xffffffff);actions.addView(button);button.setOnClickListener(v->{if(url.isEmpty()){toast("В разработке: APK ещё не опубликован.");return;}download(a);});
+        
     }
 
     private void showAppDetails(JSONObject a){
