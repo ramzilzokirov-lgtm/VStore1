@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "catalog_title": "VStore // Developer Hub",
+  "community": {
+    "title": "Сообщество VStore",
+    "subtitle": "Релизы, тестовые сборки и новости проектов",
+    "telegram_url": "https://t.me/"
+  },
+  "creator": {
+    "id": "8436409687",
+    "name": "Разиль Закиров",
+    "role": "Главный разработчик"
+  },
+  "apps": [
+    {
+      "id": "vgram_main",
+      "name": "VGRAM Client",
+      "category": "Clients",
+      "version": "Beta",
+      "badge": "NEW",
+      "description": "Модифицированный Telegram-клиент. Здесь будет доступна опубликованная сборка.",
+      "icon_url": "",
+      "download_url": "",
+      "package_name": "org.telegram.messenger",
+      "is_installed": false,
+      "exclusive": false
+    },
+    {
+      "id": "vstt",
+      "name": "vstT",
+      "category": "Clients",
+      "version": "—",
+      "badge": "",
+      "description": "Клиент проекта vstT. Добавь ссылку на APK в каталог, чтобы опубликовать релиз.",
+      "icon_url": "",
+      "download_url": "",
+      "package_name": "",
+      "is_installed": false,
+      "exclusive": false
+    }
+  ]
+}
