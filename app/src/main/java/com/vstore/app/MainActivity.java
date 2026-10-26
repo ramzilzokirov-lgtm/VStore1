@@ -56,7 +56,6 @@ public class MainActivity extends Activity {
         TextView refresh=label("↻",28,text);refresh.setGravity(Gravity.CENTER);top.addView(refresh,new LinearLayout.LayoutParams(44,48));refresh.setOnClickListener(v->loadCatalog(true));
         root.addView(top);
         
-        LinearLayout banner=new LinearLayout(this);banner.setOrientation(1);banner.setPadding(15,12,15,12);banner.setBackground(round(0x1affffff,24));LinearLayout.LayoutParams bp=new LinearLayout.LayoutParams(-1,-2);bp.setMargins(0,12,0,10);root.addView(banner,bp);
         MaterialCardView hero=new MaterialCardView(this);hero.setRadius(dp(24));hero.setCardElevation(0);hero.setStrokeWidth(dp(1));hero.setStrokeColor(0x30ffffff);hero.setCardBackgroundColor(0x1affffff);hero.setUseCompatPadding(false);hero.setContentPadding(dp(16),dp(14),dp(16),dp(14));LinearLayout.LayoutParams hp=new LinearLayout.LayoutParams(-1,-2);hp.setMargins(0,dp(12),0,dp(10));root.addView(hero,hp);
         LinearLayout heroBody=new LinearLayout(this);heroBody.setOrientation(1);hero.addView(heroBody);
         LinearLayout heroHead=new LinearLayout(this);heroHead.setGravity(Gravity.CENTER_VERTICAL);heroBody.addView(heroHead);
@@ -108,7 +107,7 @@ public class MainActivity extends Activity {
         TextView cacheRow=label("Очистить кэш каталога",15,text);cacheRow.setPadding(0,12,0,12);content.addView(cacheRow);cacheRow.setOnClickListener(v->new AlertDialog.Builder(this).setTitle("Очистить кэш?").setMessage("Сохранённый сетевой каталог будет удалён. Локальные APK останутся.").setNegativeButton("Отмена",null).setPositiveButton("Очистить",(d,w)->{getPreferences(0).edit().remove("catalog_json").apply();toast("Кэш каталога очищен");loadCatalog(true);}).show());
         TextView importRow=label("Импортировать APK из файла",15,text);importRow.setPadding(0,12,0,12);content.addView(importRow);importRow.setOnClickListener(v->{Intent i=new Intent(Intent.ACTION_OPEN_DOCUMENT);i.setType("application/vnd.android.package-archive");i.addCategory(Intent.CATEGORY_OPENABLE);startActivityForResult(i,PICK_APK);});
         TextView aboutTitle=label("О VSTORE",12,lavender);aboutTitle.setTypeface(null,1);aboutTitle.setPadding(0,18,0,0);content.addView(aboutTitle);
-        TextView about=label("VStore 1.0.0\\nКаталог приложений, модов и APK.\\nОфициальный канал: @Vmods2",13,muted);about.setPadding(0,8,0,8);content.addView(about);about.setOnClickListener(v->openUrl("https://t.me/Vmods2"));
+        TextView about=label("VStore 1.0.0\\nКаталог приложений, модов и APK.\\nОфициальный канал: @Vmods2\\n\\nПодсказка: нажмите на карточку, чтобы открыть сведения о приложении.",13,muted);about.setPadding(0,8,0,8);content.addView(about);about.setOnClickListener(v->openUrl("https://t.me/Vmods2"));
         TextView motion=label("АНИМАЦИИ",12,lavender);motion.setTypeface(null,1);motion.setPadding(0,18,0,0);content.addView(motion);
         TextView speed=label("Длительность: "+animationDuration+" мс",16,text);speed.setPadding(0,10,0,4);content.addView(speed);
         SeekBar seek=new SeekBar(this);seek.setMax(600);seek.setProgress(animationDuration);content.addView(seek);seek.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener(){public void onProgressChanged(SeekBar s,int p,boolean u){speed.setText("Длительность: "+p+" мс");}public void onStartTrackingTouch(SeekBar s){}public void onStopTrackingTouch(SeekBar s){getSharedPreferences(PREF_UI,0).edit().putInt("animation_ms",s.getProgress()).apply();}});
@@ -139,6 +138,7 @@ public class MainActivity extends Activity {
     private void applyCatalog(JSONObject json,boolean fresh){JSONArray a=json.optJSONArray("apps");if(a==null||a.length()==0)return;synchronized(apps){apps.clear();for(int i=0;i<a.length();i++)apps.add(a.optJSONObject(i));}runOnUiThread(()->{status.setText("");render();});}
     private void render(){
         if(list==null)return;
+        if(catalogRecycler!=null)catalogRecycler.setPadding(0,0,0,dp(12));
         list.removeAllViews();
         String q=search.getText().toString().toLowerCase(Locale.ROOT);
         ArrayList<JSONObject> snapshot;
@@ -154,16 +154,16 @@ public class MainActivity extends Activity {
             visible.add(VStoreAppItem.fromJson(a));
         }
         catalogAdapter.submitList(visible);
-        if(!visible.isEmpty())list.addView(catalogRecycler,new LinearLayout.LayoutParams(-1,-2));
+        if(!visible.isEmpty()){catalogRecycler.setVisibility(View.VISIBLE);list.addView(catalogRecycler,new LinearLayout.LayoutParams(-1,-2));}else{catalogRecycler.setVisibility(View.GONE);}
         int count=visible.size();
         if(activeTab.equals("Мои приложения"))for(File f:localApps)if(f.getName().toLowerCase(Locale.ROOT).contains(q)){localCard(f);count++;}
         if(count==0){
             if(snapshot.isEmpty()) loadBundledDefaults();
-            TextView empty=label("\nЗдесь пока нет опубликованных проектов.\nКаталог обновляется отдельно от APK клиента.",15,muted);
+            TextView empty=label(snapshot.isEmpty()?"Загружаем каталог…":"По этому фильтру ничего не найдено.",15,muted);
             empty.setGravity(Gravity.CENTER);empty.setPadding(20,48,20,48);list.addView(empty);
         }
     }
-    private LinearLayout card(){LinearLayout c=new LinearLayout(this);c.setOrientation(1);c.setPadding(15,13,15,13);c.setBackground(round(panel,24));LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,-2);p.setMargins(0,7,0,7);addSafe(list,c,p);if(animationDuration>0){c.setAlpha(0f);c.setTranslationY(12f);c.animate().alpha(1f).translationY(0f).setDuration(animationDuration).start();}return c;}
+    private LinearLayout card(){LinearLayout c=new LinearLayout(this);c.setOrientation(1);boolean glass=getSharedPreferences(PREF_UI,MODE_PRIVATE).getBoolean("glass",true);c.setPadding(15,13,15,13);c.setBackground(glass?getDrawable(com.vstore.app.R.drawable.bg_glass_card):round(panel,24));LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,-2);p.setMargins(0,7,0,7);addSafe(list,c,p);if(animationDuration>0&&!getSharedPreferences(PREF_UI,MODE_PRIVATE).getBoolean("reduce_motion",false)){c.setAlpha(0f);c.setTranslationY(12f);c.animate().alpha(1f).translationY(0f).setDuration(animationDuration).start();}return c;}
     private void addSafe(ViewGroup parent,View child,ViewGroup.LayoutParams params){if(child.getParent()!=null){ViewParent old=child.getParent();if(old instanceof ViewGroup)((ViewGroup)old).removeView(child);}parent.addView(child,params);}
     private void appCard(JSONObject a){LinearLayout c=card();LinearLayout row=new LinearLayout(this);row.setGravity(Gravity.CENTER_VERTICAL);c.addView(row);
         ImageView icon=new ImageView(this);icon.setImageDrawable(getDrawable(android.R.drawable.sym_def_app_icon));icon.setBackground(round(0x26ffffff,16));icon.setClipToOutline(true);row.addView(icon,new LinearLayout.LayoutParams(dp(56),dp(56)));
@@ -227,7 +227,7 @@ public class MainActivity extends Activity {
                 if (valid) {
                     getSharedPreferences(PREFS_AUTH, MODE_PRIVATE).edit().putBoolean(PREF_CREATOR_MODE, true).apply();
                     isCreatorMode = true;
-                    headerTitle.setText("VStore // Developer Hub  •  Создатель / Разиль Закиров");
+                    headerTitle.setText("VStore // Developer Hub");
                     toast("Режим создателя включён на этом устройстве.");
                     showCreatorTools();
                 } else {
