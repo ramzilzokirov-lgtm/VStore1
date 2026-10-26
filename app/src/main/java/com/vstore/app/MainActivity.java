@@ -68,6 +68,7 @@ public class MainActivity extends Activity {
     private void loadAppearance(){
         android.content.SharedPreferences p=getSharedPreferences(PREF_UI,MODE_PRIVATE);
         String theme=p.getString("theme","dark");
+        if("system".equals(theme)){int night=getResources().getConfiguration().uiMode & android.content.res.Configuration.UI_MODE_NIGHT_MASK;if(night==android.content.res.Configuration.UI_MODE_NIGHT_NO){bg=0xfff7f1f8;panel=0xffeee6f1;text=0xff241d29;muted=0xff6e6374;lavender=0xff8050a0;}}
         boolean dynamic=p.getBoolean("dynamic",false)&&Build.VERSION.SDK_INT>=31;
         if("light".equals(theme)){bg=0xfff7f1f8;panel=0xffeee6f1;text=0xff241d29;muted=0xff6e6374;lavender=0xff8050a0;}
         if(dynamic){try{bg=getColor(android.R.color.system_neutral1_900);panel=getColor(android.R.color.system_neutral1_800);text=getColor(android.R.color.system_neutral1_50);lavender=getColor(android.R.color.system_accent1_200);muted=getColor(android.R.color.system_neutral2_200);}catch(Exception ignored){}}
