@@ -35,15 +35,19 @@ public class MainActivity extends Activity {
     private TextView status, headerTitle;
     private String activeTab="Все проекты";
     private int bg=0xff111116, lavender=0xffd7b9e8, text=0xfff6f0f8, muted=0xffb9afc0, panel=0xff27232d;
+    private int animationDuration=260;
+    private static final String PREF_UI="vstore_ui";
+    private LinearLayout pageRoot;
     private final HashMap<String,Integer> progress=new HashMap<>();
     @Override public void onCreate(Bundle b){
-        super.onCreate(b);getWindow().setStatusBarColor(bg);getWindow().setNavigationBarColor(bg);
-        LinearLayout root=new LinearLayout(this);root.setOrientation(1);root.setPadding(16,12,16,6);root.setBackgroundColor(bg);
+        super.onCreate(b); loadAppearance(); getWindow().setStatusBarColor(bg);getWindow().setNavigationBarColor(bg);
+        LinearLayout root=new LinearLayout(this);pageRoot=root;root.setOrientation(1);root.setPadding(16,12,16,6);root.setBackgroundColor(bg);
         LinearLayout top=new LinearLayout(this);top.setGravity(Gravity.CENTER_VERTICAL);
         isCreatorMode = getSharedPreferences(PREFS_AUTH, MODE_PRIVATE).getBoolean(PREF_CREATOR_MODE, false);
         headerTitle=label(isCreatorMode ? "VStore // Developer Hub  •  Создатель / Разиль Закиров" : "VStore // Developer Hub",22,lavender);headerTitle.setTypeface(null,1);top.addView(headerTitle,new LinearLayout.LayoutParams(0,-2,1));
         headerTitle.setOnClickListener(v -> onLogoTap());
-        TextView refresh=label("↻",28,text);refresh.setGravity(Gravity.CENTER);top.addView(refresh,new LinearLayout.LayoutParams(48,48));refresh.setOnClickListener(v->loadCatalog(true));
+        TextView settings=label("⚙",25,text);settings.setGravity(Gravity.CENTER);top.addView(settings,new LinearLayout.LayoutParams(44,48));settings.setOnClickListener(v->showSettings());
+        TextView refresh=label("↻",28,text);refresh.setGravity(Gravity.CENTER);top.addView(refresh,new LinearLayout.LayoutParams(44,48));refresh.setOnClickListener(v->loadCatalog(true));
         root.addView(top);
         root.addView(label("Главный разработчик / Разиль Закиров • ID 8436409687",12,muted));
         LinearLayout banner=new LinearLayout(this);banner.setOrientation(1);banner.setPadding(15,12,15,12);banner.setBackground(round(0xff33283d,24));LinearLayout.LayoutParams bp=new LinearLayout.LayoutParams(-1,-2);bp.setMargins(0,12,0,10);root.addView(banner,bp);
@@ -53,12 +57,37 @@ public class MainActivity extends Activity {
         search=new EditText(this);search.setSingleLine(true);search.setHint("Поиск проектов");search.setTextColor(text);search.setHintTextColor(muted);search.setBackgroundTintList(android.content.res.ColorStateList.valueOf(lavender));root.addView(search);
         status=label("Загрузка каталога…",12,muted);root.addView(status);
         ScrollView sc=new ScrollView(this);list=new LinearLayout(this);list.setOrientation(1);sc.addView(list);root.addView(sc,new LinearLayout.LayoutParams(-1,0,1));
-        setContentView(root);
+        setContentView(root); if(animationDuration>0){root.setAlpha(0f);root.setTranslationY(18f);root.animate().alpha(1f).translationY(0f).setDuration(animationDuration+120L).start();}
         search.addTextChangedListener(new android.text.TextWatcher(){public void beforeTextChanged(CharSequence s,int st,int c,int a){}public void onTextChanged(CharSequence s,int st,int before,int count){render();}public void afterTextChanged(android.text.Editable e){}});
         File dir=new File(getFilesDir(),"library");if(dir.exists()){File[] fs=dir.listFiles((d,n)->n.toLowerCase(Locale.ROOT).endsWith(".apk"));if(fs!=null)localApps.addAll(Arrays.asList(fs));}
         makeTabs();loadCached();loadCatalog(false);
         headerTitle.setOnLongClickListener(v->{showCreatorTools();return true;});
         logCurrentCertificateSha256();
+    }
+
+    private void loadAppearance(){
+        android.content.SharedPreferences p=getSharedPreferences(PREF_UI,MODE_PRIVATE);
+        String theme=p.getString("theme","dark");
+        boolean dynamic=p.getBoolean("dynamic",false)&&Build.VERSION.SDK_INT>=31;
+        if("light".equals(theme)){bg=0xfff7f1f8;panel=0xffeee6f1;text=0xff241d29;muted=0xff6e6374;lavender=0xff8050a0;}
+        if(dynamic){try{bg=getColor(android.R.color.system_neutral1_900);panel=getColor(android.R.color.system_neutral1_800);text=getColor(android.R.color.system_neutral1_50);lavender=getColor(android.R.color.system_accent1_200);muted=getColor(android.R.color.system_neutral2_200);}catch(Exception ignored){}}
+        String accent=p.getString("accent","lavender");
+        if("blue".equals(accent)){lavender=0xff9ccaff;}else if("green".equals(accent)){lavender=0xffa6dfb0;}else if("pink".equals(accent)){lavender=0xffffb6d5;}
+        animationDuration=p.getInt("animation_ms",260);
+    }
+    private void showSettings(){
+        LinearLayout content=new LinearLayout(this);content.setOrientation(1);content.setPadding(22,8,22,4);
+        TextView appearance=label("ВНЕШНИЙ ВИД",12,lavender);appearance.setTypeface(null,1);content.addView(appearance);
+        String theme=getSharedPreferences(PREF_UI,MODE_PRIVATE).getString("theme","dark");
+        TextView themeRow=label("Тема: "+("light".equals(theme)?"Светлая":"dark".equals(theme)?"Тёмная":"Как в системе"),16,text);themeRow.setPadding(0,14,0,14);content.addView(themeRow);
+        themeRow.setOnClickListener(v->new AlertDialog.Builder(this).setTitle("Тема").setSingleChoiceItems(new String[]{"Как в системе","Тёмная","Светлая"}, "system".equals(getSharedPreferences(PREF_UI,0).getString("theme","dark"))?0:"dark".equals(getSharedPreferences(PREF_UI,0).getString("theme","dark"))?1:2,(d,w)->{getSharedPreferences(PREF_UI,0).edit().putString("theme",new String[]{"system","dark","light"}[w]).apply();d.dismiss();recreate();}).setNegativeButton("Отмена",null).show());
+        TextView accentRow=label("Акцентный цвет",16,text);accentRow.setPadding(0,14,0,14);content.addView(accentRow);
+        accentRow.setOnClickListener(v->new AlertDialog.Builder(this).setTitle("Акцентный цвет").setSingleChoiceItems(new String[]{"Лавандовый","Голубой","Зелёный","Розовый"},new String[]{"lavender","blue","green","pink"}[0].equals(getSharedPreferences(PREF_UI,0).getString("accent","lavender"))?0: "blue".equals(getSharedPreferences(PREF_UI,0).getString("accent","lavender"))?1:"green".equals(getSharedPreferences(PREF_UI,0).getString("accent","lavender"))?2:3,(d,w)->{getSharedPreferences(PREF_UI,0).edit().putString("accent",new String[]{"lavender","blue","green","pink"}[w]).apply();d.dismiss();recreate();}).setNegativeButton("Отмена",null).show());
+        if(Build.VERSION.SDK_INT>=31){Switch dynamic=new Switch(this);dynamic.setText("Цвета телефона (Android 12+)");dynamic.setTextColor(text);dynamic.setChecked(getSharedPreferences(PREF_UI,0).getBoolean("dynamic",false));content.addView(dynamic);dynamic.setOnCheckedChangeListener((b,checked)->getSharedPreferences(PREF_UI,0).edit().putBoolean("dynamic",checked).apply());}
+        TextView motion=label("АНИМАЦИИ",12,lavender);motion.setTypeface(null,1);motion.setPadding(0,18,0,0);content.addView(motion);
+        TextView speed=label("Длительность: "+animationDuration+" мс",16,text);speed.setPadding(0,10,0,4);content.addView(speed);
+        SeekBar seek=new SeekBar(this);seek.setMax(600);seek.setProgress(animationDuration);content.addView(seek);seek.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener(){public void onProgressChanged(SeekBar s,int p,boolean u){speed.setText("Длительность: "+p+" мс");}public void onStartTrackingTouch(SeekBar s){}public void onStopTrackingTouch(SeekBar s){getSharedPreferences(PREF_UI,0).edit().putInt("animation_ms",s.getProgress()).apply();}});
+        new AlertDialog.Builder(this).setTitle("Настройки").setView(content).setPositiveButton("Применить",(d,w)->recreate()).setNegativeButton("Закрыть",null).show();
     }
     private void makeTabs(){tabs.removeAllViews();String[] names={"Все проекты","Мои приложения","Плагины & Моды","Эксклюзив"};for(String n:names){TextView t=label(n,13,n.equals(activeTab)?bg:text);t.setGravity(Gravity.CENTER);t.setPadding(14,10,14,10);t.setBackground(round(n.equals(activeTab)?lavender:panel,22));LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-2,-2);p.setMargins(0,0,8,6);tabs.addView(t,p);t.setOnClickListener(v->{activeTab=n;makeTabs();render();});}}
     private GradientDrawable round(int color,int radius){GradientDrawable d=new GradientDrawable();d.setColor(color);d.setCornerRadius(radius);d.setStroke(1,0x40ffffff);return d;}
@@ -72,7 +101,7 @@ public class MainActivity extends Activity {
         if(activeTab.equals("Мои приложения"))for(File f:localApps)if(f.getName().toLowerCase(Locale.ROOT).contains(q)){localCard(f);count++;}
         if(count==0){TextView empty=label("\nЗдесь пока нет опубликованных проектов.\nКаталог обновляется отдельно от APK клиента.",15,muted);empty.setGravity(Gravity.CENTER);empty.setPadding(20,48,20,48);list.addView(empty);}
     }
-    private LinearLayout card(){LinearLayout c=new LinearLayout(this);c.setOrientation(1);c.setPadding(15,13,15,13);c.setBackground(round(0x262b2b32,24));LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,-2);p.setMargins(0,7,0,7);addSafe(list,c,p);return c;}
+    private LinearLayout card(){LinearLayout c=new LinearLayout(this);c.setOrientation(1);c.setPadding(15,13,15,13);c.setBackground(round(panel,24));LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,-2);p.setMargins(0,7,0,7);addSafe(list,c,p);if(animationDuration>0){c.setAlpha(0f);c.setTranslationY(12f);c.animate().alpha(1f).translationY(0f).setDuration(animationDuration).start();}return c;}
     private void addSafe(ViewGroup parent,View child,ViewGroup.LayoutParams params){if(child.getParent()!=null){ViewParent old=child.getParent();if(old instanceof ViewGroup)((ViewGroup)old).removeView(child);}parent.addView(child,params);}
     private void appCard(JSONObject a){LinearLayout c=card();LinearLayout row=new LinearLayout(this);row.setGravity(Gravity.CENTER_VERTICAL);c.addView(row);
         ImageView icon=new ImageView(this);icon.setImageDrawable(getDrawable(android.R.drawable.sym_def_app_icon));icon.setBackground(round(0xff393140,16));icon.setClipToOutline(true);row.addView(icon,new LinearLayout.LayoutParams(48,48));
