@@ -21,8 +21,17 @@ jobs:
           packages: 'platform-tools platforms;android-35 build-tools;35.0.0'
       - name: Build debug APK
         run: gradle --no-daemon assembleDebug
+      - name: Build optimized release APK
+        run: gradle --no-daemon assembleRelease
+      - name: Calculate APK checksums
+        run: |
+          cd app/build/outputs/apk
+          sha256sum debug/*.apk release/*.apk > SHA256SUMS.txt
       - uses: actions/upload-artifact@v4
         with:
-          name: v-store-debug-apk
-          path: app/build/outputs/apk/debug/*.apk
+          name: v-store-apks
+          path: |
+            app/build/outputs/apk/debug/*.apk
+            app/build/outputs/apk/release/*.apk
+            app/build/outputs/apk/SHA256SUMS.txt
           if-no-files-found: error
