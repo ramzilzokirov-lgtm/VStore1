@@ -11,7 +11,8 @@ import android.view.*;
 import android.widget.*;
 import com.google.android.material.card.MaterialCardView;
 import com.google.android.material.button.MaterialButton;
-import com.google.android.material.search.SearchBar;
+import androidx.recyclerview.widget.RecyclerView;
+import androidx.recyclerview.widget.LinearLayoutManager;
 import android.util.Log;
 import org.json.*;
 import java.io.*;
@@ -34,6 +35,8 @@ public class MainActivity extends Activity {
     private final ArrayList<JSONObject> apps=new ArrayList<>();
     private final ArrayList<File> localApps=new ArrayList<>();
     private LinearLayout list, tabs;
+    private RecyclerView catalogRecycler;
+    private VStoreAdapter catalogAdapter;
     private EditText search;
     private TextView status, headerTitle;
     private String activeTab="Все проекты";
@@ -61,6 +64,7 @@ public class MainActivity extends Activity {
         search=new EditText(this);search.setSingleLine(true);search.setHint("Поиск модов и приложений...");search.setTextColor(text);search.setHintTextColor(muted);search.setPadding(18,12,18,12);search.setBackground(round(0x1affffff,28));root.addView(search);
         status=label("Загрузка каталога…",12,muted);root.addView(status);
         ScrollView sc=new ScrollView(this);list=new LinearLayout(this);list.setOrientation(1);sc.addView(list);root.addView(sc,new LinearLayout.LayoutParams(-1,0,1));
+        catalogRecycler=new RecyclerView(this);catalogRecycler.setLayoutManager(new LinearLayoutManager(this));catalogRecycler.setNestedScrollingEnabled(false);catalogAdapter=new VStoreAdapter(this,item->{showAppDetails(item.toJson());},item->{download(item.toJson());});
         setContentView(root); if(animationDuration>0){root.setAlpha(0f);root.setTranslationY(18f);root.animate().alpha(1f).translationY(0f).setDuration(animationDuration+120L).start();}
         search.addTextChangedListener(new android.text.TextWatcher(){public void beforeTextChanged(CharSequence s,int st,int c,int a){}public void onTextChanged(CharSequence s,int st,int before,int count){render();}public void afterTextChanged(android.text.Editable e){}});
         File dir=new File(getFilesDir(),"library");if(dir.exists()){File[] fs=dir.listFiles((d,n)->n.toLowerCase(Locale.ROOT).endsWith(".apk"));if(fs!=null)localApps.addAll(Arrays.asList(fs));}
@@ -116,11 +120,30 @@ public class MainActivity extends Activity {
         });
     }
     private void applyCatalog(JSONObject json,boolean fresh){JSONArray a=json.optJSONArray("apps");if(a==null)return;synchronized(apps){apps.clear();for(int i=0;i<a.length();i++)apps.add(a.optJSONObject(i));}runOnUiThread(()->{status.setText(fresh?"Каталог обновлён":"Кэш каталога");render();});}
-    private void render(){if(list==null)return;list.removeAllViews();String q=search.getText().toString().toLowerCase(Locale.ROOT);ArrayList<JSONObject> snapshot; synchronized(apps){snapshot=new ArrayList<>(apps);}
-        int count=0;for(JSONObject a:snapshot){String category=a.optString("category","Apps");if(activeTab.equals("Плагины & Моды")&&!category.toLowerCase(Locale.ROOT).matches(".*(plugin|mod|плагин|мод).*"))continue;if(activeTab.equals("Эксклюзив")&&!a.optBoolean("exclusive",false))continue;if(activeTab.equals("Мои приложения")&&!a.optString("creator_id","8436409687").equals("8436409687"))continue;
-            String name=a.optString("name","Приложение");if(!name.toLowerCase(Locale.ROOT).contains(q)&&!a.optString("description","").toLowerCase(Locale.ROOT).contains(q))continue;appCard(a);count++;}
+    private void render(){
+        if(list==null)return;
+        list.removeAllViews();
+        String q=search.getText().toString().toLowerCase(Locale.ROOT);
+        ArrayList<JSONObject> snapshot;
+        synchronized(apps){snapshot=new ArrayList<>(apps);}
+        ArrayList<VStoreAppItem> visible=new ArrayList<>();
+        for(JSONObject a:snapshot){
+            String category=a.optString("category","Apps");
+            if(activeTab.equals("Плагины & Моды")&&!category.toLowerCase(Locale.ROOT).matches(".*(plugin|mod|плагин|мод).*"))continue;
+            if(activeTab.equals("Эксклюзив")&&!a.optBoolean("exclusive",false))continue;
+            if(activeTab.equals("Мои приложения")&&!a.optString("creator_id","8436409687").equals("8436409687"))continue;
+            String name=a.optString("name","Приложение");
+            if(!name.toLowerCase(Locale.ROOT).contains(q)&&!a.optString("description","").toLowerCase(Locale.ROOT).contains(q))continue;
+            visible.add(VStoreAppItem.fromJson(a));
+        }
+        catalogAdapter.submitList(visible);
+        if(!visible.isEmpty())list.addView(catalogRecycler,new LinearLayout.LayoutParams(-1,-2));
+        int count=visible.size();
         if(activeTab.equals("Мои приложения"))for(File f:localApps)if(f.getName().toLowerCase(Locale.ROOT).contains(q)){localCard(f);count++;}
-        if(count==0){TextView empty=label("\nЗдесь пока нет опубликованных проектов.\nКаталог обновляется отдельно от APK клиента.",15,muted);empty.setGravity(Gravity.CENTER);empty.setPadding(20,48,20,48);list.addView(empty);}
+        if(count==0){
+            TextView empty=label("\nЗдесь пока нет опубликованных проектов.\nКаталог обновляется отдельно от APK клиента.",15,muted);
+            empty.setGravity(Gravity.CENTER);empty.setPadding(20,48,20,48);list.addView(empty);
+        }
     }
     private LinearLayout card(){LinearLayout c=new LinearLayout(this);c.setOrientation(1);c.setPadding(15,13,15,13);c.setBackground(round(panel,24));LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,-2);p.setMargins(0,7,0,7);addSafe(list,c,p);if(animationDuration>0){c.setAlpha(0f);c.setTranslationY(12f);c.animate().alpha(1f).translationY(0f).setDuration(animationDuration).start();}return c;}
     private void addSafe(ViewGroup parent,View child,ViewGroup.LayoutParams params){if(child.getParent()!=null){ViewParent old=child.getParent();if(old instanceof ViewGroup)((ViewGroup)old).removeView(child);}parent.addView(child,params);}
