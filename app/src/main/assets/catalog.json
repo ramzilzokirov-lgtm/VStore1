@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "catalog_title": "VStore",
+  "community": {
+    "title": "Канал в Telegram // VGRAM INSIDER",
+    "subtitle": "Новости, обновления модов и плагины: @Vmods2",
+    "telegram_url": "https://t.me/Vmods2"
+  },
+  "apps": [
+    {
+      "id": "vgram_main",
+      "name": "VGRAM Client",
+      "category": "Clients",
+      "version": "0.1.366",
+      "badge": "LATEST",
+      "description": "Модифицированный Telegram-клиент VGRAM. APK опубликован в GitHub Releases.",
+      "icon_url": "",
+      "download_url": "https://github.com/ramzilzokirov-lgtm/VGRAM-Main/releases/download/v0.1.366/VGRAM-debug.apk",
+      "package_name": "org.telegram.messenger",
+      "sha256": "",
+      "exclusive": false
+    },
+    {
+      "id": "vstt",
+      "name": "vstT",
+      "category": "Clients",
+      "version": "В разработке",
+      "badge": "SOON",
+      "description": "Клиент vstT находится в разработке. Релизная ссылка будет добавлена после публикации APK.",
+      "icon_url": "",
+      "download_url": "",
+      "package_name": "",
+      "sha256": "",
+      "exclusive": false
+    }
+  ]
+}
