@@ -41,7 +41,7 @@ public class MainActivity extends Activity {
     private EditText search;
     private TextView status, headerTitle;
     private String activeTab="Все проекты";
-    private int bg=0xff0a0910, lavender=0xff7c4dff, text=0xfff6f0f8, muted=0xffb9afc0, panel=0x1affffff;
+    private int bg=0xff0a0a0c, lavender=0xffd6b45c, text=0xfff4f0e6, muted=0xffc6c0b2, panel=0x1affffff;
     private int animationDuration=260;
     private static final String PREF_UI="vstore_ui";
     private LinearLayout pageRoot;
@@ -50,7 +50,7 @@ public class MainActivity extends Activity {
     private final java.util.concurrent.ConcurrentHashMap<String,Integer> progress=new java.util.concurrent.ConcurrentHashMap<>();
     @Override public void onCreate(Bundle b){
         super.onCreate(b); try { loadAppearance(); getWindow().setStatusBarColor(bg);getWindow().setNavigationBarColor(bg);
-        LinearLayout root=new LinearLayout(this);pageRoot=root;root.setOrientation(1);root.setPadding(16,12,16,6);GradientDrawable screenBg=new GradientDrawable(GradientDrawable.Orientation.TL_BR,new int[]{0xff161424,0xff0a0910});root.setBackground(getDrawable(com.vstore.app.R.drawable.bg_screen_gradient));root.setClipToPadding(false);root.setClipChildren(false);
+        LinearLayout root=new LinearLayout(this);pageRoot=root;root.setOrientation(1);root.setPadding(16,12,16,6);GradientDrawable screenBg=new GradientDrawable(GradientDrawable.Orientation.TL_BR,new int[]{0xff202024,0xff0a0a0c});root.setBackground(getDrawable(com.vstore.app.R.drawable.bg_screen_gradient));root.setClipToPadding(false);root.setClipChildren(false);
         LinearLayout top=new LinearLayout(this);top.setGravity(Gravity.CENTER_VERTICAL);
         isCreatorMode = getSharedPreferences(PREFS_AUTH, MODE_PRIVATE).getBoolean(PREF_CREATOR_MODE, false);
         headerTitle=label("VStore",28,lavender);headerTitle.setTypeface(null,1);top.addView(headerTitle,new LinearLayout.LayoutParams(0,-2,1));
@@ -62,7 +62,7 @@ public class MainActivity extends Activity {
         MaterialCardView hero=new MaterialCardView(this);hero.setRadius(dp(24));hero.setCardElevation(0);hero.setStrokeWidth(dp(1));hero.setStrokeColor(0x30ffffff);hero.setCardBackgroundColor(0x20ffffff);hero.setUseCompatPadding(false);hero.setContentPadding(dp(16),dp(14),dp(16),dp(14));LinearLayout.LayoutParams hp=new LinearLayout.LayoutParams(-1,-2);hp.setMargins(0,dp(12),0,dp(10));root.addView(hero,hp);
         LinearLayout heroBody=new LinearLayout(this);heroBody.setOrientation(1);hero.addView(heroBody);
         LinearLayout heroHead=new LinearLayout(this);heroHead.setGravity(Gravity.CENTER_VERTICAL);heroBody.addView(heroHead);
-        ImageView tgIcon=new ImageView(this);GradientDrawable tgBg=new GradientDrawable(GradientDrawable.Orientation.TL_BR,new int[]{0xff7c4dff,0xff3478f6});tgBg.setShape(GradientDrawable.OVAL);tgIcon.setBackground(tgBg);tgIcon.setImageDrawable(getDrawable(com.vstore.app.R.drawable.ic_telegram_white));tgIcon.setScaleType(ImageView.ScaleType.CENTER_INSIDE);tgIcon.setPadding(dp(10),dp(10),dp(10),dp(10));heroHead.addView(tgIcon,new LinearLayout.LayoutParams(dp(44),dp(44)));
+        ImageView tgIcon=new ImageView(this);GradientDrawable tgBg=new GradientDrawable(GradientDrawable.Orientation.TL_BR,new int[]{0xffe7ca78,0xff9f7b2c});tgBg.setShape(GradientDrawable.OVAL);tgIcon.setBackground(tgBg);tgIcon.setImageDrawable(getDrawable(com.vstore.app.R.drawable.ic_telegram_white));tgIcon.setScaleType(ImageView.ScaleType.CENTER_INSIDE);tgIcon.setPadding(dp(10),dp(10),dp(10),dp(10));heroHead.addView(tgIcon,new LinearLayout.LayoutParams(dp(44),dp(44)));
         TextView heroTitle=label("Канал в Telegram // VGRAM INSIDER",16,text);LinearLayout.LayoutParams htp=new LinearLayout.LayoutParams(0,-2,1);htp.leftMargin=dp(12);heroHead.addView(heroTitle,htp);
         TextView heroSub=label("Новости, обновления модов и плагины: @Vmods2",13,muted);LinearLayout.LayoutParams hsp=new LinearLayout.LayoutParams(-1,-2);hsp.topMargin=dp(10);heroBody.addView(heroSub,hsp);
         TextView telegram=label("Открыть Telegram-канал  ↗",14,lavender);LinearLayout.LayoutParams tlp=new LinearLayout.LayoutParams(-1,-2);tlp.topMargin=dp(4);heroBody.addView(telegram,tlp);hero.setOnClickListener(v->{tap(v);v.animate().scaleX(.985f).scaleY(.985f).setDuration(80).withEndAction(()->v.animate().scaleX(1f).scaleY(1f).setDuration(140).start()).start();openUrl("https://t.me/Vmods2");});telegram.setOnClickListener(v->openUrl("https://t.me/Vmods2"));
@@ -116,7 +116,7 @@ public class MainActivity extends Activity {
             retry.setTextSize(15);
             retry.setGravity(Gravity.CENTER);
             retry.setPadding(20, 14, 20, 14);
-            retry.setBackground(round(0xff7c4dff, 18));
+            retry.setBackground(round(0xffd6b45c, 18));
             LinearLayout.LayoutParams rp = new LinearLayout.LayoutParams(-1, -2);
             rp.topMargin = 24;
             fallback.addView(retry, rp);
@@ -135,7 +135,7 @@ public class MainActivity extends Activity {
         if("light".equals(theme)){bg=0xfff7f1f8;panel=0xffeee6f1;text=0xff241d29;muted=0xff6e6374;lavender=0xff8050a0;}
         if(dynamic){try{bg=getColor(android.R.color.system_neutral1_900);panel=getColor(android.R.color.system_neutral1_800);text=getColor(android.R.color.system_neutral1_50);lavender=getColor(android.R.color.system_accent1_200);muted=getColor(android.R.color.system_neutral2_200);}catch(Exception ignored){}}
         String accent=p.getString("accent","lavender");
-        if("blue".equals(accent)){lavender=0xff9ccaff;}else if("green".equals(accent)){lavender=0xffa6dfb0;}else if("pink".equals(accent)){lavender=0xffffb6d5;}else if("custom".equals(accent)){lavender=p.getInt("custom_accent",0xff7c4dff);}
+        if("blue".equals(accent)){lavender=0xff9ccaff;}else if("green".equals(accent)){lavender=0xffa6dfb0;}else if("pink".equals(accent)){lavender=0xffffb6d5;}else if("custom".equals(accent)){lavender=p.getInt("custom_accent",0xffd6b45c);}
         animationDuration=p.getInt("animation_ms",260);
     }
     private void showCustomColorDialog(){
@@ -342,7 +342,7 @@ public class MainActivity extends Activity {
         final int[] selected={0};LinearLayout starRow=new LinearLayout(this);starRow.setGravity(Gravity.CENTER_VERTICAL);box.addView(starRow);TextView[] starViews=new TextView[5];
         for(int i=0;i<5;i++){final int score=i+1;TextView star=label("★",34,0xff625a68);star.setGravity(Gravity.CENTER);star.setPadding(dp(4),0,dp(4),0);starViews[i]=star;starRow.addView(star);star.setOnClickListener(v->{selected[0]=score;for(int j=0;j<5;j++)starViews[j].setTextColor(j<score?gold:0xff625a68);});}
         EditText comment=new EditText(this);comment.setHint("Что понравилось или что улучшить?");comment.setTextColor(fg);comment.setHintTextColor(mutedColor);comment.setTextSize(14);comment.setMinLines(3);comment.setGravity(Gravity.TOP|Gravity.START);comment.setPadding(dp(12),dp(10),dp(12),dp(10));comment.setBackground(round(0xff302b38,14));LinearLayout.LayoutParams commentLp=new LinearLayout.LayoutParams(-1,-2);commentLp.topMargin=dp(10);box.addView(comment,commentLp);
-        TextView send=label("Опубликовать отзыв",15,0xffffffff);send.setGravity(Gravity.CENTER);send.setTypeface(null,1);send.setPadding(dp(14),dp(13),dp(14),dp(13));send.setBackground(round(0xff7c4dff,18));LinearLayout.LayoutParams sendLp=new LinearLayout.LayoutParams(-1,-2);sendLp.topMargin=dp(10);box.addView(send,sendLp);
+        TextView send=label("Опубликовать отзыв",15,0xffffffff);send.setGravity(Gravity.CENTER);send.setTypeface(null,1);send.setPadding(dp(14),dp(13),dp(14),dp(13));send.setBackground(round(0xffd6b45c,18));LinearLayout.LayoutParams sendLp=new LinearLayout.LayoutParams(-1,-2);sendLp.topMargin=dp(10);box.addView(send,sendLp);
         send.setOnClickListener(v->{if(selected[0]==0){toast("Сначала выберите оценку");return;}String bodyText=comment.getText().toString().trim();if(bodyText.length()>1000){toast("Отзыв слишком длинный (максимум 1000 символов)");return;}send.setEnabled(false);sendSharedReview(id,selected[0],bodyText,a);});
         TextView recent=label("Отзывы сообщества",17,fg);recent.setTypeface(null,1);recent.setPadding(0,dp(18),0,dp(8));box.addView(recent);
         if(reviews.length()==0){TextView empty=label("Пока нет отзывов. Вы можете оставить первый.",13,mutedColor);empty.setPadding(0,dp(4),0,dp(10));box.addView(empty);}
