@@ -36,12 +36,13 @@ jobs:
             mkdir -p artifacts
             adb start-server
             adb wait-for-device
-            for attempt in $(seq 1 30); do
-              state="$(adb get-state 2>/dev/null || true)"
-              boot="$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r' || true)"
-              if [ "$state" = "device" ] && [ "$boot" = "1" ]; then break; fi
-              sleep 2
-            done
+            for attempt in $(seq 1 30); do state="$(adb get-state 2>/dev/null || true)"; boot="$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r' || true)"; if [ "$state" = "device" ] && [ "$boot" = "1" ]; then break; fi; sleep 2; done
+            boot="$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r' || true)"
+            if [ "$boot" != "1" ]; then
+              echo "Android emulator did not finish booting within 60 seconds."
+              adb devices -l || true
+              exit 1
+            fi
             adb devices -l | tee artifacts/adb-devices.txt
             test "$(adb get-state)" = "device"
             adb install -r app/build/outputs/apk/debug/app-debug.apk
