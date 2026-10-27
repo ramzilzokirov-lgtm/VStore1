@@ -3,8 +3,10 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
+
 permissions:
   contents: read
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -23,7 +25,6 @@ jobs:
         run: gradle --no-daemon assembleDebug
       - name: Launch app on Android emulator
         id: smoke
-        continue-on-error: true
         continue-on-error: true
         uses: reactivecircus/android-emulator-runner@v2
         with:
@@ -46,7 +47,6 @@ jobs:
             adb logcat -c
             adb shell am force-stop com.vstore.app || true
             adb shell monkey -p com.vstore.app 1 || true
-            # Allow slow hosted emulators to finish first-launch setup, then verify app process.
             app_alive=0
             for attempt in $(seq 1 15); do adb logcat -d -v threadtime > artifacts/vstore-startup-logcat.txt || true; if grep -q -E 'FATAL EXCEPTION.*com.vstore.app|Process: com.vstore.app|VStoreStartup.*E ' artifacts/vstore-startup-logcat.txt; then grep -n -A 80 -B 20 -E 'FATAL EXCEPTION|AndroidRuntime|VStoreStartup|Process: com.vstore.app' artifacts/vstore-startup-logcat.txt || true; exit 1; fi; if adb shell pidof com.vstore.app >/dev/null 2>&1; then app_alive=1; break; fi; sleep 2; done
             test "$app_alive" = "1" || { echo "V Store process not detected after launch."; adb get-state || true; grep -n -A 80 -B 20 -E 'FATAL EXCEPTION|AndroidRuntime|VStoreStartup|Process: com.vstore.app' artifacts/vstore-startup-logcat.txt || true; exit 1; }
@@ -56,19 +56,41 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: v-store-startup-diagnostics
-          path: artifacts/vstore-startup-logcat.txt
+          path: artifacts/
           if-no-files-found: ignore
       - name: Build optimized release APK
         run: gradle --no-daemon assembleRelease
-      - name: Calculate APK checksums
+      - name: Prepare APKs and checksums
         run: |
-          cd app/build/outputs/apk
-          sha256sum debug/*.apk release/*.apk > SHA256SUMS.txt
-      - uses: actions/upload-artifact@v4
+          mkdir -p dist
+          cp app/build/outputs/apk/debug/*.apk dist/VStore-debug.apk
+          cp app/build/outputs/apk/release/*.apk dist/VStore-release.apk
+          (cd dist && sha256sum VStore-debug.apk VStore-release.apk > SHA256SUMS.txt)
+      - name: Upload APK artifacts
+        uses: actions/upload-artifact@v4
         with:
           name: v-store-apks
-          path: |
-            app/build/outputs/apk/debug/*.apk
-            app/build/outputs/apk/release/*.apk
-            app/build/outputs/apk/SHA256SUMS.txt
+          path: dist/*
           if-no-files-found: error
+
+  publish-release:
+    needs: build
+    if: github.event_name == 'workflow_dispatch' && github.actor == 'ramzilzokirov-lgtm'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download built APKs
+        uses: actions/download-artifact@v4
+        with:
+          name: v-store-apks
+          path: dist
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG_NAME: vstore-${{ github.run_number }}
+        run: |
+          gh release create "$TAG_NAME" dist/VStore-debug.apk dist/VStore-release.apk dist/SHA256SUMS.txt \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "V Store build ${{ github.run_number }}" \
+            --notes "Automated V Store APK build. Commit: ${{ github.sha }}"
