@@ -2,9 +2,29 @@
     <style name="AppTheme" parent="Theme.Material3.Dark.NoActionBar">
         <item name="android:fontFamily">sans</item>
         <item name="android:windowLightStatusBar">false</item>
-        <item name="android:statusBarColor">#0A0910</item>
-        <item name="android:navigationBarColor">#171119</item>
-        <item name="android:windowBackground">#171119</item>
-        <item name="android:colorAccent">#7C4DFF</item>
+        <item name="android:statusBarColor">#0A0A0C</item>
+        <item name="android:navigationBarColor">#101013</item>
+        <item name="android:windowBackground">#0A0A0C</item>
+        <item name="android:colorAccent">#D6B45C</item>
+        <item name="colorPrimary">#D6B45C</item>
+        <item name="colorOnPrimary">#17140B</item>
+        <item name="colorSecondary">#BDA45E</item>
+        <item name="colorOnSecondary">#19160D</item>
+        <item name="colorSurface">#171719</item>
+        <item name="colorOnSurface">#F4F0E6</item>
+        <item name="colorSurfaceVariant">#252528</item>
+        <item name="colorOnSurfaceVariant">#C6C0B2</item>
+        <item name="android:windowActivityTransitions">true</item>
+        <item name="android:windowEnterAnimation">@anim/vstore_enter</item>
+        <item name="android:windowExitAnimation">@anim/vstore_exit</item>
+        <item name="android:windowAnimationStyle">@style/VStoreWindowAnimation</item>
+    </style>
+    <style name="VStoreWindowAnimation">
+        <item name="android:activityOpenEnterAnimation">@anim/vstore_enter</item>
+        <item name="android:activityOpenExitAnimation">@anim/vstore_exit</item>
+        <item name="android:activityCloseEnterAnimation">@anim/vstore_enter</item>
+        <item name="android:activityCloseExitAnimation">@anim/vstore_exit</item>
+        <item name="android:taskOpenEnterAnimation">@anim/vstore_enter</item>
+        <item name="android:taskOpenExitAnimation">@anim/vstore_exit</item>
     </style>
 </resources>
