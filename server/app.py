@@ -45,7 +45,7 @@ init_db()
 
 @app.get("/health")
 def health():
-    return jsonify({"ok": True, "service": "V Store catalog", "reviews": True})
+    return jsonify({"ok": True, "service": "V Store catalog", "reviews": "read-only"})
 
 def review_install_hash():
     install_id = request.headers.get("X-VStore-Install", "").strip()
@@ -69,30 +69,7 @@ def list_reviews():
 
 @app.post("/reviews")
 def submit_review():
-    owner = review_install_hash()
-    if not owner:
-        return jsonify({"error": "Не удалось определить установку приложения"}), 400
-    body = request.get_json(silent=True) or {}
-    app_id = str(body.get("app_id", "")).strip()
-    try:
-        rating = int(body.get("rating", 0))
-    except (TypeError, ValueError):
-        rating = 0
-    comment = str(body.get("comment", "")).strip()
-    if not app_id or len(app_id) > 100 or not all(c.isalnum() or c in "_.-" for c in app_id):
-        return jsonify({"error": "Некорректный app_id"}), 400
-    if rating < 1 or rating > 5:
-        return jsonify({"error": "Оценка должна быть от 1 до 5"}), 400
-    if len(comment) > 1000:
-        return jsonify({"error": "Отзыв слишком длинный (максимум 1000 символов)"}), 400
-    now = int(time.time())
-    with connect() as con:
-        con.execute("""INSERT INTO app_reviews(app_id,install_hash,rating,comment,created_at,updated_at)
-                    VALUES(?,?,?,?,?,?) ON CONFLICT(app_id,install_hash) DO UPDATE SET
-                    rating=excluded.rating, comment=excluded.comment, updated_at=excluded.updated_at""",
-                    (app_id,owner,rating,comment,now,now))
-        con.commit()
-    return jsonify({"status": "saved"}), 200
+    return jsonify({"error": "Публикация оценок и отзывов отключена в V Store."}), 403
 
 @app.get("/api/apps")
 def list_apps():
