@@ -3,6 +3,7 @@ import os
 import sqlite3
 import uuid
 import hmac
+import time
 from pathlib import Path
 from flask import Flask, jsonify, request, send_from_directory, abort
 
@@ -20,6 +21,17 @@ def connect():
 
 def init_db():
     with connect() as con:
+        con.execute("""CREATE TABLE IF NOT EXISTS app_reviews (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            app_id TEXT NOT NULL,
+            install_hash TEXT NOT NULL,
+            rating INTEGER NOT NULL CHECK(rating BETWEEN 1 AND 5),
+            comment TEXT NOT NULL DEFAULT '',
+            created_at INTEGER NOT NULL,
+            updated_at INTEGER NOT NULL,
+            UNIQUE(app_id, install_hash)
+        )""")
+        con.execute("CREATE INDEX IF NOT EXISTS app_reviews_app_date_idx ON app_reviews(app_id, created_at DESC)")
         con.execute("""CREATE TABLE IF NOT EXISTS apps (
             id TEXT PRIMARY KEY, name TEXT NOT NULL, package_name TEXT NOT NULL DEFAULT '',
             version_name TEXT NOT NULL DEFAULT '', size INTEGER NOT NULL, sha256 TEXT NOT NULL,
@@ -30,7 +42,54 @@ init_db()
 
 @app.get("/health")
 def health():
-    return jsonify({"ok": True, "service": "V Store catalog"})
+    return jsonify({"ok": True, "service": "V Store catalog", "reviews": True})
+
+def review_install_hash():
+    install_id = request.headers.get("X-VStore-Install", "").strip()
+    if not (16 <= len(install_id) <= 128) or not all(c.isalnum() or c in "_-" for c in install_id):
+        return None
+    salt = os.environ.get("REVIEW_HASH_SALT", "vstore-review-v1")
+    return hashlib.sha256((salt + ":" + install_id).encode()).hexdigest()
+
+@app.get("/reviews")
+def list_reviews():
+    app_id = request.args.get("app_id", "").strip()
+    if not app_id or len(app_id) > 100 or not all(c.isalnum() or c in "_.-" for c in app_id):
+        return jsonify({"error": "Некорректный app_id"}), 400
+    limit = min(max(request.args.get("limit", default=100, type=int), 1), 100)
+    offset = max(request.args.get("offset", default=0, type=int), 0)
+    with connect() as con:
+        stats = con.execute("SELECT COUNT(*) AS count, COALESCE(AVG(rating),0) AS average FROM app_reviews WHERE app_id=?", (app_id,)).fetchone()
+        rows = con.execute("SELECT rating,comment,created_at FROM app_reviews WHERE app_id=? ORDER BY created_at DESC LIMIT ? OFFSET ?", (app_id,limit,offset)).fetchall()
+    return jsonify({"app_id": app_id, "count": stats["count"], "average": round(stats["average"],2),
+                    "reviews": [{"rating": row["rating"], "comment": row["comment"], "time": row["created_at"]*1000} for row in rows]})
+
+@app.post("/reviews")
+def submit_review():
+    owner = review_install_hash()
+    if not owner:
+        return jsonify({"error": "Не удалось определить установку приложения"}), 400
+    body = request.get_json(silent=True) or {}
+    app_id = str(body.get("app_id", "")).strip()
+    try:
+        rating = int(body.get("rating", 0))
+    except (TypeError, ValueError):
+        rating = 0
+    comment = str(body.get("comment", "")).strip()
+    if not app_id or len(app_id) > 100 or not all(c.isalnum() or c in "_.-" for c in app_id):
+        return jsonify({"error": "Некорректный app_id"}), 400
+    if rating < 1 or rating > 5:
+        return jsonify({"error": "Оценка должна быть от 1 до 5"}), 400
+    if len(comment) > 1000:
+        return jsonify({"error": "Отзыв слишком длинный (максимум 1000 символов)"}), 400
+    now = int(time.time())
+    with connect() as con:
+        con.execute("""INSERT INTO app_reviews(app_id,install_hash,rating,comment,created_at,updated_at)
+                    VALUES(?,?,?,?,?,?) ON CONFLICT(app_id,install_hash) DO UPDATE SET
+                    rating=excluded.rating, comment=excluded.comment, updated_at=excluded.updated_at""",
+                    (app_id,owner,rating,comment,now,now))
+        con.commit()
+    return jsonify({"status": "saved"}), 200
 
 @app.get("/api/apps")
 def list_apps():
