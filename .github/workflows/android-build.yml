@@ -25,7 +25,7 @@ jobs:
         id: smoke
         uses: reactivecircus/android-emulator-runner@v2
         with:
-          api-level: 34
+          api-level: 31
           profile: pixel_2
           arch: x86_64
           target: google_apis
