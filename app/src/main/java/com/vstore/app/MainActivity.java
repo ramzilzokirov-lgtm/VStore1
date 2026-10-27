@@ -272,12 +272,12 @@ public class MainActivity extends Activity {
                     JSONObject item=new JSONObject();
                     item.put("id",src.optString("id"));
                     item.put("name",src.optString("name","Приложение"));
-                    item.put("category","Apps");
+                    item.put("category",src.optString("category","Apps"));
                     item.put("version",src.optString("version_name",""));
                     item.put("description",src.optString("description",""));
                     item.put("package_name",src.optString("package_name",""));
                     item.put("sha256",src.optString("sha256",""));
-                    item.put("download_url",API+src.optString("download_url",""));
+                    String remoteDownload=src.optString("download_url","");item.put("download_url",remoteDownload.startsWith("https://")?remoteDownload:API+remoteDownload);
                     item.put("creator_id",src.optString("creator_id",""));
                     mergedApps.put(item);
                 }
@@ -404,7 +404,7 @@ public class MainActivity extends Activity {
                 conn=(HttpURLConnection)new URL(API+"/api/apps").openConnection();conn.setRequestMethod("POST");conn.setConnectTimeout(20000);conn.setReadTimeout(180000);conn.setDoOutput(true);conn.setChunkedStreamingMode(65536);conn.setRequestProperty("Content-Type","multipart/form-data; boundary="+boundary);conn.setRequestProperty("X-VSTORE-PUBLISH-TOKEN",token);
                 try(DataOutputStream out=new DataOutputStream(conn.getOutputStream())){
                     writeFormField(out,boundary,"name",name);writeFormField(out,boundary,"description",description);writeFormField(out,boundary,"package_name",pkg);writeFormField(out,boundary,"version_name",version);writeFormField(out,boundary,"category",category.isEmpty()?"Apps":category);
-                    out.writeBytes("--"+boundary+"\r\n");out.writeBytes("Content-Disposition: form-data; name=\"apk\"; filename=\""+apk.getName().replace("\"","")+" .apk\"\r\n".replace(" .apk",""));out.writeBytes("Content-Type: application/vnd.android.package-archive\r\n\r\n");
+                    out.writeBytes("--"+boundary+"\r\n");out.writeBytes("Content-Disposition: form-data; name=\"apk\"; filename=\""+apk.getName().replace("\"","")+" \"\r\n".replace(" .apk",""));out.writeBytes("Content-Type: application/vnd.android.package-archive\r\n\r\n");
                     try(InputStream in=new FileInputStream(apk)){byte[] buf=new byte[65536];int n;long sent=0,last=0;while((n=in.read(buf))!=-1){out.write(buf,0,n);sent+=n;long now=SystemClock.uptimeMillis();if(now-last>250){int p=(int)(sent*100/Math.max(1,apk.length()));runOnUiThread(()->{if(dialog.isShowing())dialog.setProgress(p);});last=now;}}}
                     out.writeBytes("\r\n--"+boundary+"--\r\n");out.flush();
                 }
