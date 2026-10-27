@@ -404,7 +404,7 @@ public class MainActivity extends Activity {
                 conn=(HttpURLConnection)new URL(API+"/api/apps").openConnection();conn.setRequestMethod("POST");conn.setConnectTimeout(20000);conn.setReadTimeout(180000);conn.setDoOutput(true);conn.setChunkedStreamingMode(65536);conn.setRequestProperty("Content-Type","multipart/form-data; boundary="+boundary);conn.setRequestProperty("X-VSTORE-PUBLISH-TOKEN",token);
                 try(DataOutputStream out=new DataOutputStream(conn.getOutputStream())){
                     writeFormField(out,boundary,"name",name);writeFormField(out,boundary,"description",description);writeFormField(out,boundary,"package_name",pkg);writeFormField(out,boundary,"version_name",version);writeFormField(out,boundary,"category",category.isEmpty()?"Apps":category);
-                    out.writeBytes("--"+boundary+"\r\n");out.writeBytes("Content-Disposition: form-data; name=\"apk\"; filename=\""+apk.getName().replace("\"","")+" \"\r\n".replace(" .apk",""));out.writeBytes("Content-Type: application/vnd.android.package-archive\r\n\r\n");
+                    out.writeBytes("--"+boundary+"\r\n");out.writeBytes("Content-Disposition: form-data; name=\"apk\"; filename=\""+apk.getName().replace("\"","")+"\"\r\n");out.writeBytes("Content-Type: application/vnd.android.package-archive\r\n\r\n");
                     try(InputStream in=new FileInputStream(apk)){byte[] buf=new byte[65536];int n;long sent=0,last=0;while((n=in.read(buf))!=-1){out.write(buf,0,n);sent+=n;long now=SystemClock.uptimeMillis();if(now-last>250){int p=(int)(sent*100/Math.max(1,apk.length()));runOnUiThread(()->{if(dialog.isShowing())dialog.setProgress(p);});last=now;}}}
                     out.writeBytes("\r\n--"+boundary+"--\r\n");out.flush();
                 }
