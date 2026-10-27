@@ -25,6 +25,7 @@ public class MainActivity extends Activity {
     private static final int PICK_APK=41;
     private static final String PREFS_AUTH = "vstore_auth";
     private static final String PREF_CREATOR_MODE = "isCreatorMode";
+    private static final String PREF_PUBLISH_TOKEN = "publish_token";
     private static final int CREATOR_TAPS_REQUIRED = 5;
     private int logoTapCount = 0;
     private long lastLogoTapAt = 0L;
@@ -290,7 +291,7 @@ public class MainActivity extends Activity {
             } finally { if(apiConnection!=null)apiConnection.disconnect(); }
         });
     }
-    private void applyCatalog(JSONObject json,boolean fresh){JSONArray a=json.optJSONArray("apps");if(a==null)return;ArrayList<JSONObject> filtered=new ArrayList<>();boolean hasVtok=false;for(int i=0;i<a.length();i++){JSONObject item=a.optJSONObject(i);if(item==null)continue;String id=item.optString("id","").toLowerCase(Locale.ROOT);String name=item.optString("name","").toLowerCase(Locale.ROOT);if(id.contains("vstt")||name.equals("vstt"))continue;try{if(id.contains("vgram")||name.contains("vgram")){item.put("id","vgram_main");item.put("name","VGRAM Main");filtered.add(item);}else if(id.equals("vtok")||name.equals("vtok")||name.contains("tiktok")){item.put("id","vtok");item.put("name","VTok");filtered.add(item);hasVtok=true;}}catch(org.json.JSONException ignored){}}if(!hasVtok)filtered.add(bundledVtok());if(filtered.isEmpty())return;synchronized(apps){apps.clear();apps.addAll(filtered);}runOnUiThread(()->{status.setText("");render();});}
+    private void applyCatalog(JSONObject json,boolean fresh){JSONArray a=json.optJSONArray("apps");if(a==null)return;ArrayList<JSONObject> filtered=new ArrayList<>();boolean hasVtok=false;for(int i=0;i<a.length();i++){JSONObject item=a.optJSONObject(i);if(item==null)continue;String id=item.optString("id","").toLowerCase(Locale.ROOT);String name=item.optString("name","").toLowerCase(Locale.ROOT);if(id.contains("vstt")||name.equals("vstt"))continue;try{if(id.contains("vgram")||name.contains("vgram")){item.put("id","vgram_main");item.put("name","VGRAM Main");filtered.add(item);}else if(id.equals("vtok")||name.equals("vtok")||name.contains("tiktok")){item.put("id","vtok");item.put("name","VTok");filtered.add(item);hasVtok=true;}else{filtered.add(item);}}catch(org.json.JSONException ignored){}}if(!hasVtok)filtered.add(bundledVtok());if(filtered.isEmpty())return;synchronized(apps){apps.clear();apps.addAll(filtered);}runOnUiThread(()->{status.setText("");render();});}
     private void render(){
         if(list==null)return;
         entranceCardIndex=0;
@@ -374,7 +375,48 @@ public class MainActivity extends Activity {
     private void loadSharedReviews(String appId,JSONObject app){
         pool.execute(()->{HttpURLConnection c=null;try{c=(HttpURLConnection)new URL(API+"/reviews?app_id="+java.net.URLEncoder.encode(appId,"UTF-8")+"&limit=100").openConnection();c.setConnectTimeout(8000);c.setReadTimeout(12000);c.setRequestProperty("X-VStore-Install",reviewInstallId());JSONArray reviews=new JSONObject(readText(c.getInputStream())).optJSONArray("reviews");if(reviews!=null){getSharedPreferences("vstore_reviews",MODE_PRIVATE).edit().putString(appId,reviews.toString()).apply();}}catch(Exception ignored){}finally{if(c!=null)c.disconnect();}});
     }
-    private void localCard(File f){LinearLayout c=card();LinearLayout row=new LinearLayout(this);row.setGravity(Gravity.CENTER_VERTICAL);c.addView(row);ImageView icon=new ImageView(this);icon.setImageDrawable(apkIcon(f));row.addView(icon,new LinearLayout.LayoutParams(48,48));TextView name=label(apkLabel(f),16,text);name.setTypeface(null,1);name.setPadding(12,0,0,0);row.addView(name,new LinearLayout.LayoutParams(0,-2,1));TextView t=label("Локальный APK • "+String.format(Locale.ROOT,"%.1f MB",f.length()/1048576f)+" • SHA-256 "+shortHash(safeSha256(f)),12,muted);c.addView(t);LinearLayout actions=new LinearLayout(this);actions.setGravity(Gravity.CENTER_VERTICAL);c.addView(actions);TextView install=label("УСТАНОВИТЬ",13,bg);install.setGravity(Gravity.CENTER);install.setPadding(16,10,16,10);install.setBackground(round(lavender,18));actions.addView(install);install.setOnClickListener(v->install(f));TextView remove=label("  Удалить",13,muted);remove.setPadding(14,10,8,10);actions.addView(remove);remove.setOnClickListener(v->new AlertDialog.Builder(this).setTitle("Удалить APK?").setMessage(f.getName()).setNegativeButton("Отмена",null).setPositiveButton("Удалить",(d,w)->{if(f.delete())localApps.remove(f);render();}).show());}
+    private void localCard(File f){LinearLayout c=card();LinearLayout row=new LinearLayout(this);row.setGravity(Gravity.CENTER_VERTICAL);c.addView(row);ImageView icon=new ImageView(this);icon.setImageDrawable(apkIcon(f));row.addView(icon,new LinearLayout.LayoutParams(48,48));TextView name=label(apkLabel(f),16,text);name.setTypeface(null,1);name.setPadding(12,0,0,0);row.addView(name,new LinearLayout.LayoutParams(0,-2,1));TextView t=label("Локальный APK • "+String.format(Locale.ROOT,"%.1f MB",f.length()/1048576f)+" • SHA-256 "+shortHash(safeSha256(f)),12,muted);c.addView(t);LinearLayout actions=new LinearLayout(this);actions.setGravity(Gravity.CENTER_VERTICAL);c.addView(actions);TextView install=label("УСТАНОВИТЬ",13,bg);install.setGravity(Gravity.CENTER);install.setPadding(16,10,16,10);install.setBackground(round(lavender,18));actions.addView(install);install.setOnClickListener(v->install(f));TextView publish=label("Опубликовать для всех",13,lavender);publish.setGravity(Gravity.CENTER);publish.setPadding(12,10,8,10);actions.addView(publish);publish.setOnClickListener(v->showPublishDialog(f));TextView remove=label("Удалить",13,muted);remove.setPadding(12,10,8,10);actions.addView(remove);remove.setOnClickListener(v->new AlertDialog.Builder(this).setTitle("Удалить APK?").setMessage(f.getName()).setNegativeButton("Отмена",null).setPositiveButton("Удалить",(d,w)->{if(f.delete())localApps.remove(f);render();}).show());}
+
+    private void showPublishDialog(File apk) {
+        LinearLayout form=new LinearLayout(this);form.setOrientation(1);form.setPadding(dp(18),dp(8),dp(18),dp(4));
+        EditText appName=new EditText(this);appName.setSingleLine(true);appName.setHint("Название приложения");appName.setText(apkLabel(apk));form.addView(appName);
+        EditText version=new EditText(this);version.setSingleLine(true);version.setHint("Версия (например 1.0.0)");form.addView(version);
+        EditText description=new EditText(this);description.setHint("Описание для всех пользователей");description.setMinLines(2);form.addView(description);
+        EditText category=new EditText(this);category.setSingleLine(true);category.setHint("Категория (например Apps, Mods)");category.setText("Apps");form.addView(category);
+        EditText token=new EditText(this);token.setSingleLine(true);token.setHint("Ключ автора VSTORE_PUBLISH_TOKEN");token.setInputType(android.text.InputType.TYPE_CLASS_TEXT|android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD);token.setText(getSharedPreferences(PREFS_AUTH,MODE_PRIVATE).getString(PREF_PUBLISH_TOKEN,""));form.addView(token);
+        new AlertDialog.Builder(this).setTitle("Опубликовать APK").setMessage("Файл будет загружен в общий каталог V Store и станет доступен всем пользователям. Ключ автора хранится только на этом устройстве.").setView(form).setNegativeButton("Отмена",null).setPositiveButton("Опубликовать",(d,w)->{
+            String name=appName.getText().toString().trim(), ver=version.getText().toString().trim(), desc=description.getText().toString().trim(), cat=category.getText().toString().trim(), secret=token.getText().toString().trim();
+            if(name.isEmpty()||secret.isEmpty()){toast("Укажи название и ключ автора");return;}
+            getSharedPreferences(PREFS_AUTH,MODE_PRIVATE).edit().putString(PREF_PUBLISH_TOKEN,secret).apply();
+            publishApk(apk,name,ver,desc,cat,secret);
+        }).show();
+    }
+    private void publishApk(File apk,String name,String version,String description,String category,String token){
+        if(!apk.isFile()||apk.length()==0){toast("APK-файл не найден");return;}
+        if(apk.length()>200L*1024L*1024L){toast("Максимальный размер публикации — 200 МБ");return;}
+        ProgressDialog dialog=new ProgressDialog(this);dialog.setTitle("Публикация V Store");dialog.setMessage("Загрузка APK на сервер…");dialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);dialog.setMax(100);dialog.setProgress(0);dialog.setCancelable(false);dialog.show();
+        pool.execute(()->{
+            HttpURLConnection conn=null;String error=null;boolean success=false;
+            String boundary="----VStore"+UUID.randomUUID().toString().replace("-","");
+            try{
+                PackageInfo info=getPackageManager().getPackageArchiveInfo(apk.getAbsolutePath(),0);
+                String pkg=info==null||info.packageName==null?"":info.packageName;
+                conn=(HttpURLConnection)new URL(API+"/api/apps").openConnection();conn.setRequestMethod("POST");conn.setConnectTimeout(20000);conn.setReadTimeout(180000);conn.setDoOutput(true);conn.setChunkedStreamingMode(65536);conn.setRequestProperty("Content-Type","multipart/form-data; boundary="+boundary);conn.setRequestProperty("X-VSTORE-PUBLISH-TOKEN",token);
+                try(DataOutputStream out=new DataOutputStream(conn.getOutputStream())){
+                    writeFormField(out,boundary,"name",name);writeFormField(out,boundary,"description",description);writeFormField(out,boundary,"package_name",pkg);writeFormField(out,boundary,"version_name",version);writeFormField(out,boundary,"category",category.isEmpty()?"Apps":category);
+                    out.writeBytes("--"+boundary+"\r\n");out.writeBytes("Content-Disposition: form-data; name=\"apk\"; filename=\""+apk.getName().replace("\"","")+" .apk\"\r\n".replace(" .apk",""));out.writeBytes("Content-Type: application/vnd.android.package-archive\r\n\r\n");
+                    try(InputStream in=new FileInputStream(apk)){byte[] buf=new byte[65536];int n;long sent=0,last=0;while((n=in.read(buf))!=-1){out.write(buf,0,n);sent+=n;long now=SystemClock.uptimeMillis();if(now-last>250){int p=(int)(sent*100/Math.max(1,apk.length()));runOnUiThread(()->{if(dialog.isShowing())dialog.setProgress(p);});last=now;}}}
+                    out.writeBytes("\r\n--"+boundary+"--\r\n");out.flush();
+                }
+                int code=conn.getResponseCode();InputStream response=code>=200&&code<300?conn.getInputStream():conn.getErrorStream();String body=response==null?"":readText(response);
+                if(code==201){success=true;}else if(code==401)error="Ключ автора не совпадает с VSTORE_PUBLISH_TOKEN на сервере.";else if(code==503)error="На сервере не настроен VSTORE_PUBLISH_TOKEN. Его нужно добавить в переменные Render.";else error="Сервер вернул HTTP "+code+": "+body;
+            }catch(Exception e){error="Не удалось загрузить APK: "+e.getMessage();}finally{if(conn!=null)conn.disconnect();}
+            final boolean ok=success;final String why=error;runOnUiThread(()->{if(dialog.isShowing())dialog.dismiss();if(ok){toast("Опубликовано для всех пользователей V Store");activeTab="Все проекты";makeTabs();loadCatalog(true);}else new AlertDialog.Builder(this).setTitle("Публикация не удалась").setMessage(why==null?"Неизвестная ошибка":why).setPositiveButton("Повторить",(d,w)->publishApk(apk,name,version,description,category,token)).setNegativeButton("Закрыть",null).show();});
+        });
+    }
+    private void writeFormField(DataOutputStream out,String boundary,String key,String value)throws IOException{
+        out.writeBytes("--"+boundary+"\r\n");out.writeBytes("Content-Disposition: form-data; name=\""+key+"\"\r\n\r\n");out.write(value.getBytes(java.nio.charset.StandardCharsets.UTF_8));out.writeBytes("\r\n");
+    }
     private String safeSha256(File f){try{return sha256(f);}catch(Exception e){return "ошибка";}}
     private String shortHash(String s){return s.isEmpty()?"—":s.substring(0,Math.min(12,s.length()))+"…";}
     private boolean installed(String pkg){try{getPackageManager().getPackageInfo(pkg,0);return true;}catch(Exception e){return false;}}
@@ -382,7 +424,7 @@ public class MainActivity extends Activity {
     private void download(JSONObject a){
         final String id=a.optString("id","app"),url=a.optString("download_url","");
         if(url.isEmpty()){toast("Ссылка на APK не опубликована в каталоге");return;}
-        if(!url.startsWith("https://github.com/")&&!url.startsWith("https://objects.githubusercontent.com/")){toast("Для безопасности APK должен скачиваться из GitHub Releases");return;}
+        if(!url.startsWith("https://github.com/")&&!url.startsWith("https://objects.githubusercontent.com/")&&!url.startsWith(API+"/api/apps/")){toast("Для безопасности APK должен скачиваться из GitHub Releases или официального каталога V Store");return;}
         synchronized(progress){if(progress.containsKey(id)){toast("Загрузка уже выполняется");return;}progress.put(id,0);}
         render();
         pool.execute(()->{
