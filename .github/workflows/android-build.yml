@@ -29,8 +29,8 @@ jobs:
           profile: pixel_2
           arch: x86_64
           target: google_apis
-          emulator-options: -no-window -no-audio -no-boot-anim -camera-back none
-          disable-animations: true
+          emulator-options: -no-window -no-audio -no-boot-anim -camera-back none -gpu swiftshader_indirect
+          disable-animations: false
           script: |
             set -eu
             mkdir -p artifacts
