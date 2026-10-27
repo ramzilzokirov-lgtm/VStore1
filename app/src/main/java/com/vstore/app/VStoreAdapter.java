@@ -69,7 +69,7 @@ public final class VStoreAdapter extends ListAdapter<VStoreAppItem,VStoreAdapter
         if(item.id.toLowerCase(java.util.Locale.ROOT).contains("vgram")||item.name.toLowerCase(java.util.Locale.ROOT).contains("vgram"))h.icon.setImageResource(R.drawable.ic_vgram);else if(item.id.toLowerCase(java.util.Locale.ROOT).contains("vtok")||item.name.toLowerCase(java.util.Locale.ROOT).equals("vtok"))h.icon.setImageResource(R.drawable.ic_vtok);else try { if(item.packageName!=null&&!item.packageName.isEmpty()){android.content.pm.ApplicationInfo info=context.getPackageManager().getApplicationInfo(item.packageName,0);h.icon.setImageDrawable(context.getPackageManager().getApplicationIcon(info));} else h.icon.setImageResource(R.drawable.ic_app_default); } catch(Exception ignored){h.icon.setImageResource(R.drawable.ic_app_default);}
         boolean ready=item.downloadUrl!=null&&!item.downloadUrl.isEmpty();
         Integer pct=progress.get(item.id);boolean downloading=pct!=null;
-        h.progressBar.setVisibility(downloading?View.VISIBLE:View.GONE);h.progressBar.setIndeterminate(pct==0);if(pct!=null&&pct>0)h.progressBar.setProgress(pct);
+        h.progressBar.setVisibility(downloading?View.VISIBLE:View.GONE);h.progressBar.setIndeterminate(downloading && pct.intValue()==0);if(pct!=null&&pct>0)h.progressBar.setProgress(pct);
         h.action.setText(downloading?(pct>0?"СКАЧИВАЕТСЯ "+pct+"%":"ПОДКЛЮЧЕНИЕ…"):(ready?"СКАЧАТЬ":"В РАЗРАБОТКЕ"));
         h.action.setEnabled(ready&&!downloading);
         h.action.setAlpha(ready?1f:0.58f);
