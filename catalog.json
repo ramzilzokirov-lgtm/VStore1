@@ -11,13 +11,13 @@
       "id": "vgram_main",
       "name": "VGRAM Main",
       "category": "Clients",
-      "version": "0.1.370",
+      "version": "0.1.384",
       "badge": "LATEST",
       "description": "Основной клиент VGRAM — последняя опубликованная версия.",
       "icon_url": "",
-      "download_url": "https://github.com/ramzilzokirov-lgtm/VGRAM-Main/releases/download/v0.1.370/VGRAM-debug.apk",
+      "download_url": "https://github.com/ramzilzokirov-lgtm/VGRAM-Main/releases/download/v0.1.384/VGRAM-debug.apk",
       "package_name": "org.telegram.messenger",
-      "sha256": "0cae0938c34948b97319dd8fcf55077d932ef2a00c5963216d2606f1741ac3a2",
+      "sha256": "6d1d40f6b665e117b1d00500b2946a6f5ccbf0469da3f093719d1a102779d45b",
       "exclusive": false
     },
     {
