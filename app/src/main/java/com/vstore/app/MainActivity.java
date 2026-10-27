@@ -74,7 +74,12 @@ public class MainActivity extends Activity {
         status=label("",12,muted);status.setVisibility(View.GONE);root.addView(status);
         ScrollView sc=new ScrollView(this);list=new LinearLayout(this);list.setOrientation(1);sc.addView(list);root.addView(sc,new LinearLayout.LayoutParams(-1,0,1));
         catalogRecycler=new RecyclerView(this);catalogRecycler.setLayoutManager(new LinearLayoutManager(this));catalogRecycler.setNestedScrollingEnabled(false);catalogAdapter=new VStoreAdapter(this,item->{showAppDetails(item.toJson());},item->{download(item.toJson());},progress);catalogRecycler.setAdapter(catalogAdapter);
-        setContentView(root); boolean reduce=getSharedPreferences(PREF_UI,MODE_PRIVATE).getBoolean("reduce_motion",false); if(animationDuration>0&&!reduce){root.setAlpha(0f);root.setTranslationY(dp(18));root.setScaleX(.975f);root.setScaleY(.975f);root.animate().alpha(1f).translationY(0f).scaleX(1f).scaleY(1f).setInterpolator(new android.view.animation.PathInterpolator(.18f,.72f,.22f,1f)).setDuration(animationDuration+220L).start(); animateEntrance(top,30); animateEntrance(hero,100); animateEntrance(importApk,150); animateEntrance(hsv,190); animateEntrance(searchWrap,230);}
+        setContentView(root);
+        root.setAlpha(0f);
+        root.setTranslationY(28f);
+        root.setScaleX(0.985f);
+        root.setScaleY(0.985f);
+        root.animate().alpha(1f).translationY(0f).scaleX(1f).scaleY(1f).setDuration(520L).setInterpolator(new android.view.animation.OvershootInterpolator(0.72f)).start(); boolean reduce=getSharedPreferences(PREF_UI,MODE_PRIVATE).getBoolean("reduce_motion",false); if(animationDuration>0&&!reduce){root.setAlpha(0f);root.setTranslationY(dp(18));root.setScaleX(.975f);root.setScaleY(.975f);root.animate().alpha(1f).translationY(0f).scaleX(1f).scaleY(1f).setInterpolator(new android.view.animation.PathInterpolator(.18f,.72f,.22f,1f)).setDuration(animationDuration+220L).start(); animateEntrance(top,30); animateEntrance(hero,100); animateEntrance(importApk,150); animateEntrance(hsv,190); animateEntrance(searchWrap,230);}
         search.addTextChangedListener(new android.text.TextWatcher(){public void beforeTextChanged(CharSequence s,int st,int count,int after){}public void onTextChanged(CharSequence s,int st,int before,int count){clearSearch.setVisibility(s.length()>0?View.VISIBLE:View.GONE);render();}public void afterTextChanged(android.text.Editable e){}});
         File dir=new File(getFilesDir(),"library");if(dir.exists()){File[] fs=dir.listFiles((d,n)->n.toLowerCase(Locale.ROOT).endsWith(".apk"));if(fs!=null)localApps.addAll(Arrays.asList(fs));}
         makeTabs();loadCached();loadCatalog(false);
