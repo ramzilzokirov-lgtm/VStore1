@@ -15,8 +15,6 @@
         <item name="colorSurfaceVariant">#252528</item>
         <item name="colorOnSurfaceVariant">#C6C0B2</item>
         <item name="android:windowActivityTransitions">true</item>
-        <item name="android:windowEnterAnimation">@anim/vstore_enter</item>
-        <item name="android:windowExitAnimation">@anim/vstore_exit</item>
         <item name="android:windowAnimationStyle">@style/VStoreWindowAnimation</item>
     </style>
     <style name="VStoreWindowAnimation">
