@@ -52,8 +52,8 @@ public class MainActivity extends Activity {
         isCreatorMode = getSharedPreferences(PREFS_AUTH, MODE_PRIVATE).getBoolean(PREF_CREATOR_MODE, false);
         headerTitle=label("VStore",28,lavender);headerTitle.setTypeface(null,1);top.addView(headerTitle,new LinearLayout.LayoutParams(0,-2,1));
         headerTitle.setOnClickListener(v -> {tap(v);onLogoTap();});
-        TextView settings=label("⚙",25,text);settings.setGravity(Gravity.CENTER);top.addView(settings,new LinearLayout.LayoutParams(44,48));settings.setOnClickListener(v->{tap(v);showSettings();});
-        TextView refresh=label("↻",28,text);refresh.setGravity(Gravity.CENTER);top.addView(refresh,new LinearLayout.LayoutParams(44,48));refresh.setOnClickListener(v->{tap(v);refresh.animate().rotationBy(360f).setDuration(500).start();loadCatalog(true);});
+        TextView settings=label("☷",25,text);settings.setGravity(Gravity.CENTER);settings.setContentDescription("Настройки VStore");settings.setBackground(round(0x22ffffff,16));LinearLayout.LayoutParams settingsParams=new LinearLayout.LayoutParams(dp(44),dp(44));settingsParams.setMargins(dp(4),0,dp(6),0);top.addView(settings,settingsParams);settings.setOnClickListener(v->{tap(v);showSettings();});
+        TextView refresh=label("⟳",28,text);refresh.setGravity(Gravity.CENTER);refresh.setContentDescription("Обновить каталог");refresh.setBackground(round(0x22ffffff,16));top.addView(refresh,new LinearLayout.LayoutParams(dp(44),dp(44)));refresh.setOnClickListener(v->{tap(v);refresh.animate().rotationBy(360f).setDuration(500).start();loadCatalog(true);});
         root.addView(top);
         
         MaterialCardView hero=new MaterialCardView(this);hero.setRadius(dp(24));hero.setCardElevation(0);hero.setStrokeWidth(dp(1));hero.setStrokeColor(0x30ffffff);hero.setCardBackgroundColor(0x1affffff);hero.setUseCompatPadding(false);hero.setContentPadding(dp(16),dp(14),dp(16),dp(14));LinearLayout.LayoutParams hp=new LinearLayout.LayoutParams(-1,-2);hp.setMargins(0,dp(12),0,dp(10));root.addView(hero,hp);
@@ -169,7 +169,7 @@ public class MainActivity extends Activity {
         TextView motion=label("АНИМАЦИИ",12,lavender);motion.setTypeface(null,1);motion.setPadding(0,18,0,0);content.addView(motion);
         TextView speed=label("Длительность: "+animationDuration+" мс",16,text);speed.setPadding(0,10,0,4);content.addView(speed);
         SeekBar seek=new SeekBar(this);seek.setMax(600);seek.setProgress(animationDuration);content.addView(seek);seek.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener(){public void onProgressChanged(SeekBar s,int p,boolean u){speed.setText("Длительность: "+p+" мс");}public void onStartTrackingTouch(SeekBar s){}public void onStopTrackingTouch(SeekBar s){getSharedPreferences(PREF_UI,0).edit().putInt("animation_ms",s.getProgress()).apply();}});
-        new AlertDialog.Builder(this).setTitle("Настройки").setView(content).setPositiveButton("Применить",(d,w)->recreate()).setNegativeButton("Закрыть",null).show();
+        AlertDialog dialog=new AlertDialog.Builder(this).setTitle("Настройки VStore").setView(content).setPositiveButton("Применить",(d,w)->recreate()).setNegativeButton("Закрыть",null).create();dialog.setOnShowListener(ignored->{android.view.Window window=dialog.getWindow();if(window!=null){window.setBackgroundDrawable(round(0xee211e2c,28));window.addFlags(android.view.WindowManager.LayoutParams.FLAG_DIM_BEHIND);android.view.WindowManager.LayoutParams lp=window.getAttributes();lp.dimAmount=0.62f;window.setAttributes(lp);}});dialog.show();
     }
     private void makeTabs(){tabs.removeAllViews();String[] names={"Все проекты","Мои приложения","Плагины & Моды","Эксклюзив"};for(String n:names){TextView t=label(n,14,n.equals(activeTab)?0xffffffff:text);t.setGravity(Gravity.CENTER);t.setPadding(dp(17),dp(11),dp(17),dp(11));t.setBackground(round(n.equals(activeTab)?lavender:panel,18));LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-2,-2);p.setMargins(0,dp(3),dp(8),dp(7));tabs.addView(t,p);t.setOnClickListener(v->{tap(v);activeTab=n;makeTabs();render();if(!getSharedPreferences(PREF_UI,MODE_PRIVATE).getBoolean("reduce_motion",false)){t.setScaleX(.94f);t.setScaleY(.94f);t.animate().scaleX(1f).scaleY(1f).alpha(1f).setInterpolator(new android.view.animation.OvershootInterpolator(1.2f)).setDuration(220).start();}});}}
     private void tap(View v){if(getSharedPreferences(PREF_UI,MODE_PRIVATE).getBoolean("haptics",true))v.performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY);if(animationDuration>0&&!getSharedPreferences(PREF_UI,MODE_PRIVATE).getBoolean("reduce_motion",false)){v.animate().cancel();v.setScaleX(.97f);v.setScaleY(.97f);v.animate().scaleX(1f).scaleY(1f).setInterpolator(new android.view.animation.OvershootInterpolator(1.4f)).setDuration(Math.min(220,Math.max(100,animationDuration))).start();}}
@@ -215,6 +215,7 @@ public class MainActivity extends Activity {
             visible.add(VStoreAppItem.fromJson(a));
         }
         catalogAdapter.submitList(visible);
+        if(catalogAdapter!=null)catalogAdapter.notifyDataSetChanged(); // progress map changes independently of ListAdapter item contents
         if(!visible.isEmpty()){catalogRecycler.setVisibility(View.VISIBLE);list.addView(catalogRecycler,new LinearLayout.LayoutParams(-1,-2));}else{catalogRecycler.setVisibility(View.GONE);}
         int count=visible.size();
         if(activeTab.equals("Мои приложения"))for(File f:localApps)if(f.getName().toLowerCase(Locale.ROOT).contains(q)){localCard(f);count++;}
