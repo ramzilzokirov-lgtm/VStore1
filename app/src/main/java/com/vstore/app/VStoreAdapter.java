@@ -41,7 +41,7 @@ public final class VStoreAdapter extends ListAdapter<VStoreAppItem,VStoreAdapter
         boolean glass=context.getSharedPreferences("vstore_ui",Context.MODE_PRIVATE).getBoolean("glass",true);
         boolean compact=context.getSharedPreferences("vstore_ui",Context.MODE_PRIVATE).getBoolean("compact",false);
         card.setRadius(dp(24)); card.setCardElevation(glass?dp(2):0); card.setStrokeWidth(glass?dp(1):0);
-        card.setStrokeColor(0x33d6b45c); card.setCardBackgroundColor(glass?0x1affffff:0xff1b1b1e);
+        card.setStrokeColor(0x33d6b45c); card.setCardBackgroundColor(glass?0x1affffff:0xff1b1b1e); card.setRippleColor(android.content.res.ColorStateList.valueOf(0x33d6b45c));
         if(!context.getSharedPreferences("vstore_ui",Context.MODE_PRIVATE).getBoolean("reduce_motion",false)){card.setAlpha(0f);card.setTranslationY(dp(22));card.setScaleX(.975f);card.setScaleY(.975f);}
         RecyclerView.LayoutParams cp=new RecyclerView.LayoutParams(-1,-2);
         cp.setMargins(0,dp(7),0,dp(7)); card.setLayoutParams(cp);
@@ -59,7 +59,7 @@ public final class VStoreAdapter extends ListAdapter<VStoreAppItem,VStoreAdapter
         TextView description=label("",13,textColor);description.setMaxLines(2);description.setEllipsize(android.text.TextUtils.TruncateAt.END);
         LinearLayout.LayoutParams descParams=new LinearLayout.LayoutParams(-1,-2);descParams.topMargin=dp(compact?5:9);body.addView(description,descParams);
         if(compact){icon.getLayoutParams().width=dp(44);icon.getLayoutParams().height=dp(44);description.setMaxLines(1);}
-        ProgressBar progressBar=new ProgressBar(context,null,android.R.attr.progressBarStyleHorizontal);progressBar.setMax(100);progressBar.setIndeterminate(true);progressBar.setVisibility(View.GONE);LinearLayout.LayoutParams pp=new LinearLayout.LayoutParams(-1,dp(4));pp.topMargin=dp(8);body.addView(progressBar,pp);
+        ProgressBar progressBar=new ProgressBar(context,null,android.R.attr.progressBarStyleHorizontal);progressBar.setMax(100);progressBar.setIndeterminate(true);progressBar.setIndeterminateTintList(android.content.res.ColorStateList.valueOf(0xffe7ca78));progressBar.setProgressTintList(android.content.res.ColorStateList.valueOf(0xffd6b45c));progressBar.setVisibility(View.GONE);LinearLayout.LayoutParams pp=new LinearLayout.LayoutParams(-1,dp(4));pp.topMargin=dp(8);body.addView(progressBar,pp);
         MaterialButton action=new MaterialButton(context);action.setCornerRadius(dp(18));action.setMinHeight(dp(40));action.setMinimumHeight(dp(40));
         action.setTextSize(12);action.setTypeface(null,1);action.setInsetTop(0);action.setInsetBottom(0);
         LinearLayout.LayoutParams ap=new LinearLayout.LayoutParams(-2,dp(40));ap.topMargin=dp(10);body.addView(action,ap);
@@ -73,12 +73,12 @@ public final class VStoreAdapter extends ListAdapter<VStoreAppItem,VStoreAdapter
         if(item.id.toLowerCase(java.util.Locale.ROOT).contains("vgram")||item.name.toLowerCase(java.util.Locale.ROOT).contains("vgram"))h.icon.setImageResource(R.drawable.ic_vgram);else if(item.id.toLowerCase(java.util.Locale.ROOT).contains("vtok")||item.name.toLowerCase(java.util.Locale.ROOT).equals("vtok"))h.icon.setImageResource(R.drawable.ic_vtok);else try { if(item.packageName!=null&&!item.packageName.isEmpty()){android.content.pm.ApplicationInfo info=context.getPackageManager().getApplicationInfo(item.packageName,0);h.icon.setImageDrawable(context.getPackageManager().getApplicationIcon(info));} else h.icon.setImageResource(R.drawable.ic_app_default); } catch(Exception ignored){h.icon.setImageResource(R.drawable.ic_app_default);}
         boolean ready=item.downloadUrl!=null&&!item.downloadUrl.isEmpty();
         Integer pct=progress.get(item.id);boolean downloading=pct!=null;
-        h.progressBar.setVisibility(downloading?View.VISIBLE:View.GONE);h.progressBar.setIndeterminate(downloading && pct.intValue()==0);if(pct!=null&&pct>0)h.progressBar.setProgress(pct);
+        boolean wasVisible=h.progressBar.getVisibility()==View.VISIBLE;h.progressBar.setVisibility(downloading?View.VISIBLE:View.GONE);h.progressBar.setIndeterminate(downloading && pct.intValue()==0);if(pct!=null&&pct>0){h.progressBar.setProgress(pct);if(!wasVisible&&!context.getSharedPreferences("vstore_ui",Context.MODE_PRIVATE).getBoolean("reduce_motion",false)){h.progressBar.setAlpha(0f);h.progressBar.setScaleY(.5f);h.progressBar.animate().alpha(1f).scaleY(1f).setDuration(240).start();}}
         h.action.setText(downloading?(pct>0?"СКАЧИВАЕТСЯ "+pct+"%":"ПОДКЛЮЧЕНИЕ…"):(ready?"СКАЧАТЬ":"В РАЗРАБОТКЕ"));
         h.action.setEnabled(ready&&!downloading);
         h.action.setAlpha(ready?1f:0.58f);
         h.action.setBackgroundTintList(android.content.res.ColorStateList.valueOf(ready?accent:0xff55515d));
-        h.action.setTextColor(ready?0xffffffff:0xffc7c2cc);
+        h.action.setTextColor(ready?0xff17140b:0xffc7c2cc);
         h.card.setOnClickListener(v->{animatePress(v);onDetails.onAction(item);});
         h.action.setOnClickListener(v->{if(ready){animatePress(v);onDownload.onAction(item);}});
         boolean reduce=context.getSharedPreferences("vstore_ui",Context.MODE_PRIVATE).getBoolean("reduce_motion",false);
