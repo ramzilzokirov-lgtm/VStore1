@@ -43,11 +43,20 @@ jobs:
             adb install -r app/build/outputs/apk/debug/app-debug.apk
             adb logcat -c
             adb shell am force-stop com.vstore.app || true
-            adb shell monkey -p com.vstore.app 1
-            sleep 12
-            adb logcat -d -v threadtime > artifacts/vstore-startup-logcat.txt
-            if grep -q -E 'FATAL EXCEPTION.*com.vstore.app|Process: com.vstore.app|VStoreStartup.*E ' artifacts/vstore-startup-logcat.txt; then grep -n -A 80 -B 20 -E 'FATAL EXCEPTION|AndroidRuntime|VStoreStartup|Process: com.vstore.app' artifacts/vstore-startup-logcat.txt || true; exit 1; fi
-            if adb shell pidof com.vstore.app >/dev/null 2>&1; then echo "V Store process remained alive after launch."; else echo "V Store process not detected; checking emulator health before classifying startup."; adb get-state; grep -n -A 80 -B 20 -E 'FATAL EXCEPTION|AndroidRuntime|VStoreStartup|Process: com.vstore.app' artifacts/vstore-startup-logcat.txt || true; exit 1; fi
+            adb shell monkey -p com.vstore.app 1 || true
+            # Allow slow hosted emulators to finish first-launch setup, then verify app process.
+            app_alive=0
+            for attempt in $(seq 1 15); do
+              adb logcat -d -v threadtime > artifacts/vstore-startup-logcat.txt || true
+              if grep -q -E 'FATAL EXCEPTION.*com.vstore.app|Process: com.vstore.app|VStoreStartup.*E ' artifacts/vstore-startup-logcat.txt; then
+                grep -n -A 80 -B 20 -E 'FATAL EXCEPTION|AndroidRuntime|VStoreStartup|Process: com.vstore.app' artifacts/vstore-startup-logcat.txt || true
+                exit 1
+              fi
+              if adb shell pidof com.vstore.app >/dev/null 2>&1; then app_alive=1; break; fi
+              sleep 2
+            done
+            test "$app_alive" = "1" || { echo "V Store process not detected after launch."; adb get-state || true; grep -n -A 80 -B 20 -E 'FATAL EXCEPTION|AndroidRuntime|VStoreStartup|Process: com.vstore.app' artifacts/vstore-startup-logcat.txt || true; exit 1; }
+            echo "V Store process remained alive after launch."
       - name: Upload startup diagnostics
         if: always()
         uses: actions/upload-artifact@v4
