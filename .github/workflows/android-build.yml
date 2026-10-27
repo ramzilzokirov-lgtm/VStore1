@@ -34,7 +34,6 @@ jobs:
           script: |
             set -eu
             mkdir -p artifacts
-            mkdir -p artifacts
             adb start-server
             adb wait-for-device
             for attempt in $(seq 1 30); do
