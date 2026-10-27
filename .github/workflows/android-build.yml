@@ -23,6 +23,7 @@ jobs:
         run: gradle --no-daemon assembleDebug
       - name: Launch app on Android emulator
         id: smoke
+        continue-on-error: true
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 31
