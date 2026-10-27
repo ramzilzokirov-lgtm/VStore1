@@ -75,11 +75,17 @@ public class MainActivity extends Activity {
         ScrollView sc=new ScrollView(this);list=new LinearLayout(this);list.setOrientation(1);sc.addView(list);root.addView(sc,new LinearLayout.LayoutParams(-1,0,1));
         catalogRecycler=new RecyclerView(this);catalogRecycler.setLayoutManager(new LinearLayoutManager(this));catalogRecycler.setNestedScrollingEnabled(false);catalogAdapter=new VStoreAdapter(this,item->{showAppDetails(item.toJson());},item->{download(item.toJson());},progress);catalogRecycler.setAdapter(catalogAdapter);
         setContentView(root);
-        root.setAlpha(0f);
-        root.setTranslationY(28f);
-        root.setScaleX(0.985f);
-        root.setScaleY(0.985f);
-        root.animate().alpha(1f).translationY(0f).scaleX(1f).scaleY(1f).setDuration(520L).setInterpolator(new android.view.animation.OvershootInterpolator(0.72f)).start(); boolean reduce=getSharedPreferences(PREF_UI,MODE_PRIVATE).getBoolean("reduce_motion",false); if(animationDuration>0&&!reduce){root.setAlpha(0f);root.setTranslationY(dp(18));root.setScaleX(.975f);root.setScaleY(.975f);root.animate().alpha(1f).translationY(0f).scaleX(1f).scaleY(1f).setInterpolator(new android.view.animation.PathInterpolator(.18f,.72f,.22f,1f)).setDuration(animationDuration+220L).start(); animateEntrance(top,30); animateEntrance(hero,100); animateEntrance(importApk,150); animateEntrance(hsv,190); animateEntrance(searchWrap,230);}
+        boolean reduce=getSharedPreferences(PREF_UI,MODE_PRIVATE).getBoolean("reduce_motion",false);
+        if(animationDuration>0&&!reduce){
+            root.setAlpha(0f);root.setTranslationY(dp(18));root.setScaleX(.985f);root.setScaleY(.985f);
+            root.animate().alpha(1f).translationY(0f).scaleX(1f).scaleY(1f)
+                .setInterpolator(new android.view.animation.PathInterpolator(.18f,.72f,.22f,1f))
+                .setDuration(Math.max(360,animationDuration+180L)).start();
+            animateEntrance(top,70);animateEntrance(hero,150);animateEntrance(importApk,210);
+            animateEntrance(hsv,260);animateEntrance(searchWrap,310);animateEntrance(status,350);
+        }else{
+            root.setAlpha(1f);root.setTranslationY(0f);root.setScaleX(1f);root.setScaleY(1f);
+        }
         search.addTextChangedListener(new android.text.TextWatcher(){public void beforeTextChanged(CharSequence s,int st,int count,int after){}public void onTextChanged(CharSequence s,int st,int before,int count){clearSearch.setVisibility(s.length()>0?View.VISIBLE:View.GONE);render();}public void afterTextChanged(android.text.Editable e){}});
         File dir=new File(getFilesDir(),"library");if(dir.exists()){File[] fs=dir.listFiles((d,n)->n.toLowerCase(Locale.ROOT).endsWith(".apk"));if(fs!=null)localApps.addAll(Arrays.asList(fs));}
         makeTabs();loadCached();loadCatalog(false);
@@ -149,9 +155,9 @@ public class MainActivity extends Activity {
         new AlertDialog.Builder(this).setTitle("Свой цвет").setMessage("Введи HEX: #RRGGBB или #AARRGGBB").setView(box).setNegativeButton("Отмена",null).setNeutralButton("Сбросить", (d,w)->{prefs.edit().remove("custom_accent").putString("accent","lavender").apply();recreate();}).setPositiveButton("Применить",(d,w)->{try{String raw=hex.getText().toString().trim();int color=Color.parseColor(raw.startsWith("#")?raw:"#"+raw);prefs.edit().putInt("custom_accent",color).putString("accent","custom").apply();recreate();}catch(Exception e){toast("Неверный цвет. Пример: #7C4DFF");}}).show();
     }
     private void showSettings(){
-        final int surface=0xff2b2730, iconSurface=0xff51445d, fg=0xffeee7f1, secondary=0xffc4bac9, accent=0xffe0b0ff;
+        final int surface=0xff202024, iconSurface=0xff38352e, fg=0xfff4f0e6, secondary=0xffc6c0b2, accent=0xffd6b45c;
         final android.content.SharedPreferences prefs=getSharedPreferences(PREF_UI,MODE_PRIVATE);
-        LinearLayout page=new LinearLayout(this);page.setOrientation(1);page.setBackgroundColor(0xff17111a);
+        LinearLayout page=new LinearLayout(this);page.setOrientation(1);page.setBackgroundColor(0xff0a0a0c);
         LinearLayout toolbar=new LinearLayout(this);toolbar.setGravity(Gravity.CENTER_VERTICAL);toolbar.setPadding(dp(18),dp(12),dp(18),dp(12));
         TextView back=label("‹",38,fg);back.setGravity(Gravity.CENTER);toolbar.addView(back,new LinearLayout.LayoutParams(dp(48),dp(52)));
         TextView title=label("Настройки",27,fg);LinearLayout.LayoutParams titleLp=new LinearLayout.LayoutParams(-1,-2);titleLp.leftMargin=dp(12);toolbar.addView(title,titleLp);page.addView(toolbar);
@@ -304,7 +310,6 @@ public class MainActivity extends Activity {
             visible.add(VStoreAppItem.fromJson(a));
         }
         catalogAdapter.submitList(visible);
-        if(catalogAdapter!=null)catalogAdapter.notifyDataSetChanged();
         entrancePlayed=true; // progress map changes independently of ListAdapter item contents
         if(!visible.isEmpty()){catalogRecycler.setVisibility(View.VISIBLE);list.addView(catalogRecycler,new LinearLayout.LayoutParams(-1,-2));}else{catalogRecycler.setVisibility(View.GONE);}
         int count=visible.size();
@@ -335,7 +340,7 @@ public class MainActivity extends Activity {
 
     private void showAppDetails(JSONObject a){
         final String id=a.optString("id","app"), name=a.optString("name","Приложение");
-        final int surface=0xff25212d, fg=0xfff6f0f8, mutedColor=0xffb9afc0, gold=0xffffc857;
+        final int surface=0xff202024, fg=0xfff4f0e6, mutedColor=0xffc6c0b2, gold=0xffd6b45c;
         ScrollView scroll=new ScrollView(this);LinearLayout box=new LinearLayout(this);box.setOrientation(1);box.setPadding(dp(20),dp(12),dp(20),dp(18));scroll.addView(box);
         TextView description=label(a.optString("description","Описание отсутствует"),15,text);box.addView(description);
         addDetailLine(box,"Категория",a.optString("category","Приложения"));addDetailLine(box,"Версия",a.optString("version","не указана"));addDetailLine(box,"Пакет",a.optString("package_name","не указан"));
