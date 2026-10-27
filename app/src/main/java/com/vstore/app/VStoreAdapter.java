@@ -42,7 +42,6 @@ public final class VStoreAdapter extends ListAdapter<VStoreAppItem,VStoreAdapter
         boolean compact=context.getSharedPreferences("vstore_ui",Context.MODE_PRIVATE).getBoolean("compact",false);
         card.setRadius(dp(24)); card.setCardElevation(glass?dp(2):0); card.setStrokeWidth(glass?dp(1):0);
         card.setStrokeColor(0x33d6b45c); card.setCardBackgroundColor(glass?0x1affffff:0xff1b1b1e); card.setRippleColor(android.content.res.ColorStateList.valueOf(0x33d6b45c));
-        if(!context.getSharedPreferences("vstore_ui",Context.MODE_PRIVATE).getBoolean("reduce_motion",false)){card.setAlpha(0f);card.setTranslationY(dp(22));card.setScaleX(.975f);card.setScaleY(.975f);}
         RecyclerView.LayoutParams cp=new RecyclerView.LayoutParams(-1,-2);
         cp.setMargins(0,dp(7),0,dp(7)); card.setLayoutParams(cp);
         LinearLayout body=new LinearLayout(context); body.setOrientation(LinearLayout.VERTICAL); body.setPadding(dp(15),dp(13),dp(15),dp(13)); card.addView(body);
@@ -83,14 +82,16 @@ public final class VStoreAdapter extends ListAdapter<VStoreAppItem,VStoreAdapter
         h.action.setOnClickListener(v->{if(ready){animatePress(v);onDownload.onAction(item);}});
         boolean reduce=context.getSharedPreferences("vstore_ui",Context.MODE_PRIVATE).getBoolean("reduce_motion",false);
         if(!reduce&&entranceAnimatedIds.add(item.id)){
-            int positionDelay=Math.min(360,Math.max(0,position)*70);
+            int positionDelay=Math.min(420,Math.max(0,position)*75);
             h.card.animate().cancel();
-            h.card.setAlpha(0f);h.card.setTranslationY(dp(22));h.card.setScaleX(.975f);h.card.setScaleY(.975f);
+            h.card.setAlpha(0f);h.card.setTranslationY(dp(20));h.card.setScaleX(.975f);h.card.setScaleY(.975f);
             h.card.animate().alpha(1f).translationY(0f).scaleX(1f).scaleY(1f)
-                .setStartDelay(positionDelay).setDuration(420)
-                .setInterpolator(new android.view.animation.PathInterpolator(.16f,1f,.3f,1f)).start();
-            h.card.setElevation(dp(1));
+                .setStartDelay(positionDelay).setDuration(440)
+                .setInterpolator(new android.view.animation.PathInterpolator(.18f,.72f,.22f,1f)).start();
+            h.card.setElevation(dp(2));
         } else if(reduce) {
+            h.card.animate().cancel();h.card.setAlpha(1f);h.card.setTranslationY(0f);h.card.setScaleX(1f);h.card.setScaleY(1f);
+        } else if(entranceAnimatedIds.contains(item.id)) {
             h.card.animate().cancel();h.card.setAlpha(1f);h.card.setTranslationY(0f);h.card.setScaleX(1f);h.card.setScaleY(1f);
         }
     }
