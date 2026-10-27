@@ -309,37 +309,46 @@ public class MainActivity extends Activity {
     private void loadIcon(String url,ImageView target){pool.execute(()->{try{HttpURLConnection c=(HttpURLConnection)new URL(url).openConnection();c.setConnectTimeout(5000);c.setReadTimeout(7000);Bitmap b=BitmapFactory.decodeStream(c.getInputStream());if(b!=null)runOnUiThread(()->target.setImageBitmap(b));}catch(Exception ignored){}});}
     private void download(JSONObject a){
         final String id=a.optString("id","app"),url=a.optString("download_url","");
-        if(url.isEmpty()){toast("Ссылка на APK пока не опубликована");return;}
+        if(url.isEmpty()){toast("Ссылка на APK не опубликована в каталоге");return;}
+        if(!url.startsWith("https://github.com/")&&!url.startsWith("https://objects.githubusercontent.com/")){toast("Для безопасности APK должен скачиваться из GitHub Releases");return;}
         synchronized(progress){if(progress.containsKey(id)){toast("Загрузка уже выполняется");return;}progress.put(id,0);}
         render();
         pool.execute(()->{
-            File dir=getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS);
-            File out=new File(dir==null?getFilesDir():dir,id+".apk"),part=new File(out.getAbsolutePath()+".part");
+            File base=getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS);File dir=base==null?getFilesDir():base;
+            if(!dir.exists()&&!dir.mkdirs()){synchronized(progress){progress.remove(id);}runOnUiThread(()->toast("Не удалось создать папку загрузок"));return;}
+            File out=new File(dir,id+".apk"),part=new File(out.getAbsolutePath()+".part");
             HttpURLConnection conn=null;
             try{
-                if(!url.startsWith("https://")&&!url.startsWith("http://"))throw new IOException("Некорректная ссылка");
-                conn=(HttpURLConnection)new URL(url).openConnection();conn.setInstanceFollowRedirects(true);conn.setConnectTimeout(20000);conn.setReadTimeout(120000);conn.setRequestProperty("User-Agent","VStore-Android/1.0");conn.connect();
-                int code=conn.getResponseCode();if(code<200||code>=300)throw new IOException("HTTP "+code);
-                long len=conn.getContentLengthLong();long total=0;long lastUi=0;
-                try(InputStream in=conn.getInputStream();OutputStream os=new FileOutputStream(part)){
-                    byte[] b=new byte[32768];int n;
-                    while((n=in.read(b))!=-1){os.write(b,0,n);total+=n;
-                        if(len>0){int pct=(int)Math.min(99,total*100/len);synchronized(progress){progress.put(id,pct);}
-                        }else{synchronized(progress){progress.put(id,0);}}
-                        long now=android.os.SystemClock.elapsedRealtime();if(now-lastUi>180||n<0){lastUi=now;runOnUiThread(()->{if(!isFinishing())render();});}
-                    }
-                    os.flush();
+                long total=part.exists()?part.length():0;long lastUi=0;int attempts=0;long expectedLength=-1;
+                while(attempts<4){
+                    attempts++;conn=(HttpURLConnection)new URL(url).openConnection();conn.setInstanceFollowRedirects(true);conn.setConnectTimeout(45000);conn.setReadTimeout(600000);conn.setRequestProperty("User-Agent","VStore-Android/1.1");conn.setRequestProperty("Accept","application/octet-stream");conn.setRequestProperty("Accept-Encoding","identity");
+                    if(total>0)conn.setRequestProperty("Range","bytes="+total+"-");
+                    conn.connect();int code=conn.getResponseCode();
+                    if(total>0&&code==200){total=0;if(part.exists()&&!part.delete())throw new IOException("Не удалось перезапустить загрузку");}
+                    else if(code!=200&&code!=206)throw new IOException("GitHub вернул HTTP "+code);
+                    long responseLength=conn.getContentLengthLong();if(responseLength>=0)expectedLength=total+responseLength;
+                    try(InputStream in=conn.getInputStream();OutputStream os=new FileOutputStream(part,total>0&&code==206)){
+                        byte[] buffer=new byte[128*1024];int n;
+                        while((n=in.read(buffer))!=-1){os.write(buffer,0,n);total+=n;
+                            if(expectedLength>0){int pct=(int)Math.min(99,total*100/expectedLength);synchronized(progress){progress.put(id,pct);}}
+                            long now=android.os.SystemClock.elapsedRealtime();if(now-lastUi>=450){lastUi=now;runOnUiThread(()->{if(!isFinishing())render();});}
+                        }
+                        os.flush();
+                    }catch(IOException networkError){if(conn!=null){conn.disconnect();conn=null;}if(attempts>=4)throw networkError;try{Thread.sleep(800L*attempts);}catch(InterruptedException interrupted){Thread.currentThread().interrupt();throw new IOException("Загрузка прервана");}continue;}
+                    if(expectedLength>0&&total<expectedLength){if(conn!=null){conn.disconnect();conn=null;}if(attempts>=4)throw new IOException("Соединение оборвалось: получено "+total+" из "+expectedLength+" байт");continue;}
+                    if(total==0)throw new IOException("GitHub вернул пустой файл");
+                    break;
                 }
-                if(total==0)throw new IOException("Сервер вернул пустой файл");
-                String expected=a.optString("sha256","");if(!expected.isEmpty()&&!expected.equalsIgnoreCase(sha256(part)))throw new IOException("SHA-256 не совпал");
+                if(!part.exists()||part.length()==0)throw new IOException("APK не получен от GitHub");
+                String expected=a.optString("sha256","");if(!expected.isEmpty()&&!expected.equalsIgnoreCase(sha256(part)))throw new IOException("SHA-256 не совпал: файл не будет установлен");
                 if(out.exists()&&!out.delete())throw new IOException("Не удалось заменить старый APK");
                 if(!part.renameTo(out))throw new IOException("Не удалось сохранить APK");
                 synchronized(progress){progress.remove(id);}
-                runOnUiThread(()->{if(!isFinishing()){render();toast("Загрузка завершена");install(out);}});
+                runOnUiThread(()->{if(!isFinishing()){render();toast("APK скачан и проверен");install(out);}});
             }catch(Exception e){
-                if(part.exists())part.delete();synchronized(progress){progress.remove(id);}
                 String message=e.getMessage()==null?e.getClass().getSimpleName():e.getMessage();
-                runOnUiThread(()->{if(!isFinishing()){render();toast("Ошибка загрузки: "+message);}});
+                synchronized(progress){progress.remove(id);}
+                runOnUiThread(()->{if(!isFinishing()){render();toast("Ошибка GitHub-загрузки: "+message+(part.exists()?" · можно продолжить повторной попыткой":""));}});
             }finally{if(conn!=null)conn.disconnect();}
         });
     }
