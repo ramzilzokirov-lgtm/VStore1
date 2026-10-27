@@ -207,23 +207,67 @@ public class MainActivity extends Activity {
     private int dp(float value){return (int)(value*getResources().getDisplayMetrics().density+0.5f);}
     private GradientDrawable round(int color,int radius){GradientDrawable d=new GradientDrawable();d.setColor(color);d.setCornerRadius(dp(radius));d.setStroke(dp(1),0x33ffffff);return d;}
     private TextView label(String s,int size,int color){TextView t=new TextView(this);t.setText(s);t.setTextSize(size);t.setTextColor(color);t.setPadding(0,3,0,3);return t;}
-    private void loadCached(){String raw=getPreferences(0).getString("catalog_json","");if(!raw.isEmpty())try{applyCatalog(new JSONObject(raw),false);}catch(Exception ignored){}if(apps.isEmpty())loadBundledDefaults();}
+    private void loadCached(){String raw=getSharedPreferences("vstore_catalog",MODE_PRIVATE).getString("catalog_json","");if(!raw.isEmpty())try{applyCatalog(new JSONObject(raw),false);}catch(Exception ignored){}if(apps.isEmpty())loadBundledDefaults();}
     private JSONObject bundledVtok(){try{JSONObject t=new JSONObject();t.put("id","vtok");t.put("name","VTok");t.put("category","Clients");t.put("version","В разработке");t.put("badge","В РАЗРАБОТКЕ");t.put("description","VTok ещё не готов. APK-мод VTok пока не опубликован; исходный TikTok не предлагается как готовый VTok.");t.put("download_url","");t.put("package_name","");t.put("sha256","");return t;}catch(Exception e){return new JSONObject();}}
     private void loadBundledDefaults(){try{JSONObject root=new JSONObject();JSONArray a=new JSONArray();JSONObject v=new JSONObject();v.put("id","vgram_main");v.put("name","VGRAM Main");v.put("category","Clients");v.put("version","0.1.403");v.put("badge","LATEST");v.put("description","Основной клиент VGRAM — последняя опубликованная версия.");v.put("download_url","https://github.com/ramzilzokirov-lgtm/VGRAM-Main/releases/download/v0.1.403/VGRAM-debug.apk");v.put("package_name","org.telegram.messenger");v.put("sha256","3ee5bde31a6228e6535567590e853ba31d23539cb15693adfc2f3964bb2bb5ff");a.put(v);a.put(bundledVtok());root.put("apps",a);applyCatalog(root,false);}catch(Exception e){Log.e("VStore","Bundled catalog failed",e);}}
     private void loadCatalog(boolean force){
         status.setText("");
         pool.execute(()->{
+            JSONObject canonical=null;
+            HttpURLConnection catalogConnection=null;
             try {
-                HttpURLConnection conn=(HttpURLConnection)new URL(API+"/api/apps"+(force?"?v="+System.currentTimeMillis():"")).openConnection();
-                conn.setConnectTimeout(7000);conn.setReadTimeout(12000);conn.setUseCaches(!force);
-                String raw=readText(conn.getInputStream());JSONArray remote=new JSONArray(raw);JSONObject json=new JSONObject();JSONArray normalized=new JSONArray();
-                for(int i=0;i<remote.length();i++){JSONObject src=remote.optJSONObject(i);if(src==null)continue;JSONObject item=new JSONObject();
-                    item.put("id",src.optString("id"));item.put("name",src.optString("name","Приложение"));item.put("category","Apps");item.put("version",src.optString("version_name",""));item.put("description",src.optString("description",""));item.put("package_name",src.optString("package_name",""));item.put("sha256",src.optString("sha256",""));item.put("download_url",API+src.optString("download_url",""));item.put("creator_id",src.optString("creator_id",""));normalized.put(item);}
-                json.put("apps",normalized);String cached=json.toString();getPreferences(0).edit().putString("catalog_json",cached).apply();runOnUiThread(()->applyCatalog(json,true));
-            }catch(Exception apiError){
-                try{HttpURLConnection conn=(HttpURLConnection)new URL(CATALOG_URL+(force?"?v="+System.currentTimeMillis():"")).openConnection();conn.setConnectTimeout(8000);conn.setReadTimeout(12000);conn.setUseCaches(!force);String raw=readText(conn.getInputStream());JSONObject json=new JSONObject(raw);getPreferences(0).edit().putString("catalog_json",raw).apply();runOnUiThread(()->{status.setText("");applyCatalog(json,true);});}
-                catch(Exception fallbackError){runOnUiThread(()->{status.setText("");if(apps.isEmpty())loadBundledDefaults();render();});}
+                URL catalogUrl=new URL(CATALOG_URL+(force?"?v="+System.currentTimeMillis():""));
+                catalogConnection=(HttpURLConnection)catalogUrl.openConnection();
+                catalogConnection.setConnectTimeout(8000);
+                catalogConnection.setReadTimeout(12000);
+                catalogConnection.setUseCaches(!force);
+                canonical=new JSONObject(readText(catalogConnection.getInputStream()));
+            } catch(Exception catalogError) {
+                Log.w("VStore","GitHub catalog unavailable",catalogError);
+            } finally { if(catalogConnection!=null)catalogConnection.disconnect(); }
+
+            if(canonical!=null){
+                final JSONObject currentCatalog=canonical;
+                getSharedPreferences("vstore_catalog",MODE_PRIVATE).edit().putString("catalog_json",canonical.toString()).apply();
+                runOnUiThread(()->{if(!isFinishing()){status.setText("");applyCatalog(currentCatalog,true);}});
             }
+
+            HttpURLConnection apiConnection=null;
+            try {
+                apiConnection=(HttpURLConnection)new URL(API+"/api/apps"+(force?"?v="+System.currentTimeMillis():"")).openConnection();
+                apiConnection.setConnectTimeout(7000);
+                apiConnection.setReadTimeout(12000);
+                apiConnection.setUseCaches(!force);
+                JSONArray remote=new JSONArray(readText(apiConnection.getInputStream()));
+                JSONObject merged=canonical==null?new JSONObject():canonical;
+                JSONArray mergedApps=merged.optJSONArray("apps");
+                if(mergedApps==null)mergedApps=new JSONArray();
+                for(int i=0;i<remote.length();i++){
+                    JSONObject src=remote.optJSONObject(i);
+                    if(src==null)continue;
+                    String remoteId=src.optString("id","").toLowerCase(Locale.ROOT);
+                    String remoteName=src.optString("name","").toLowerCase(Locale.ROOT);
+                    if(remoteId.contains("vgram")||remoteId.contains("vtok")||remoteName.contains("vgram")||remoteName.equals("vtok")||remoteName.contains("tiktok"))continue;
+                    JSONObject item=new JSONObject();
+                    item.put("id",src.optString("id"));
+                    item.put("name",src.optString("name","Приложение"));
+                    item.put("category","Apps");
+                    item.put("version",src.optString("version_name",""));
+                    item.put("description",src.optString("description",""));
+                    item.put("package_name",src.optString("package_name",""));
+                    item.put("sha256",src.optString("sha256",""));
+                    item.put("download_url",API+src.optString("download_url",""));
+                    item.put("creator_id",src.optString("creator_id",""));
+                    mergedApps.put(item);
+                }
+                merged.put("apps",mergedApps);
+                final JSONObject result=merged;
+                getSharedPreferences("vstore_catalog",MODE_PRIVATE).edit().putString("catalog_json",result.toString()).apply();
+                runOnUiThread(()->{if(!isFinishing()){status.setText("");applyCatalog(result,true);}});
+            } catch(Exception apiError) {
+                Log.i("VStore","Uploaded-app catalog unavailable; using GitHub catalog",apiError);
+                if(canonical==null)runOnUiThread(()->{if(!isFinishing()){status.setText("");if(apps.isEmpty())loadBundledDefaults();render();}});
+            } finally { if(apiConnection!=null)apiConnection.disconnect(); }
         });
     }
     private void applyCatalog(JSONObject json,boolean fresh){JSONArray a=json.optJSONArray("apps");if(a==null)return;ArrayList<JSONObject> filtered=new ArrayList<>();boolean hasVtok=false;for(int i=0;i<a.length();i++){JSONObject item=a.optJSONObject(i);if(item==null)continue;String id=item.optString("id","").toLowerCase(Locale.ROOT);String name=item.optString("name","").toLowerCase(Locale.ROOT);if(id.contains("vstt")||name.equals("vstt"))continue;try{if(id.contains("vgram")||name.contains("vgram")){item.put("id","vgram_main");item.put("name","VGRAM Main");filtered.add(item);}else if(id.equals("vtok")||name.equals("vtok")||name.contains("tiktok")){item.put("id","vtok");item.put("name","VTok");filtered.add(item);hasVtok=true;}}catch(org.json.JSONException ignored){}}if(!hasVtok)filtered.add(bundledVtok());if(filtered.isEmpty())return;synchronized(apps){apps.clear();apps.addAll(filtered);}runOnUiThread(()->{status.setText("");render();});}
@@ -404,7 +448,7 @@ public class MainActivity extends Activity {
         new AlertDialog.Builder(this).setTitle("Инструменты создателя")
             .setMessage("Разиль Закиров • Creator ID 8436409687\nSHA-256 сертификата сборки записан в Logcat с тегом VStoreAuth.")
             .setPositiveButton("Принудительно сбросить кэш", (d,w)->{
-                getPreferences(0).edit().remove("catalog_json").apply();
+                getSharedPreferences("vstore_catalog",MODE_PRIVATE).edit().remove("catalog_json").apply();
                 loadCatalog(true);
             })
             .setNeutralButton("Выбрать тестовый APK",(d,w)->{
