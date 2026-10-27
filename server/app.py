@@ -32,9 +32,12 @@ def init_db():
             UNIQUE(app_id, install_hash)
         )""")
         con.execute("CREATE INDEX IF NOT EXISTS app_reviews_app_date_idx ON app_reviews(app_id, created_at DESC)")
+        app_columns = {row["name"] for row in con.execute("PRAGMA table_info(apps)").fetchall()}
+        if "category" not in app_columns:
+            con.execute("ALTER TABLE apps ADD COLUMN category TEXT NOT NULL DEFAULT 'Apps'")
         con.execute("""CREATE TABLE IF NOT EXISTS apps (
             id TEXT PRIMARY KEY, name TEXT NOT NULL, package_name TEXT NOT NULL DEFAULT '',
-            version_name TEXT NOT NULL DEFAULT '', size INTEGER NOT NULL, sha256 TEXT NOT NULL,
+            version_name TEXT NOT NULL DEFAULT '', category TEXT NOT NULL DEFAULT 'Apps', size INTEGER NOT NULL, sha256 TEXT NOT NULL,
             filename TEXT NOT NULL, description TEXT NOT NULL DEFAULT '',
             created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, downloads INTEGER NOT NULL DEFAULT 0
         )""")
@@ -100,7 +103,7 @@ def list_apps():
                                (f"%{q}%", f"%{q}%", f"%{q}%")).fetchall()
         else:
             rows = con.execute("SELECT * FROM apps ORDER BY created_at DESC").fetchall()
-    return jsonify([dict(r, download_url=f"/api/apps/{r['id']}/download") for r in rows])
+    return jsonify([dict(r, download_url=f"{request.url_root.rstrip('/')}/api/apps/{r['id']}/download") for r in rows])
 
 @app.post("/api/apps")
 def publish_app():
@@ -114,7 +117,12 @@ def publish_app():
     name = request.form.get("name", "").strip()
     description = request.form.get("description", "").strip()[:1000]
     package_name = request.form.get("package_name", "").strip()
-    version_name = request.form.get("version_name", "").strip()
+    version_name = request.form.get("version_name", "").strip()[:80]
+    category = request.form.get("category", "Apps").strip()[:80] or "Apps"
+    if len(name) > 120:
+        return jsonify({"error": "Название слишком длинное (максимум 120 символов)"}), 400
+    if len(package_name) > 200:
+        return jsonify({"error": "Имя пакета слишком длинное"}), 400
     if not uploaded or not uploaded.filename.lower().endswith(".apk"):
         return jsonify({"error": "Выберите APK-файл"}), 400
     if not name:
@@ -141,8 +149,8 @@ def publish_app():
                 path.unlink(missing_ok=True)
                 return jsonify({"error": "Файл не похож на APK/ZIP"}), 400
         with connect() as con:
-            con.execute("INSERT INTO apps(id,name,package_name,version_name,size,sha256,filename,description) VALUES(?,?,?,?,?,?,?,?)",
-                        (app_id, name, package_name, version_name, size, digest.hexdigest(), filename, description))
+            con.execute("INSERT INTO apps(id,name,package_name,version_name,category,size,sha256,filename,description) VALUES(?,?,?,?,?,?,?,?,?)",
+                        (app_id, name, package_name, version_name, category, size, digest.hexdigest(), filename, description))
     except Exception:
         path.unlink(missing_ok=True)
         raise
