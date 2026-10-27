@@ -77,7 +77,7 @@ public final class VStoreAdapter extends ListAdapter<VStoreAppItem,VStoreAdapter
         h.action.setTextColor(ready?0xffffffff:0xffc7c2cc);
         h.card.setOnClickListener(v->{animatePress(v);onDetails.onAction(item);});
         h.action.setOnClickListener(v->{if(ready){animatePress(v);onDownload.onAction(item);}});
-        if(!context.getSharedPreferences("vstore_ui",Context.MODE_PRIVATE).getBoolean("reduce_motion",false)){h.card.setAlpha(0f);h.card.setTranslationY(dp(12));h.card.animate().alpha(1f).translationY(0f).setDuration(260).setInterpolator(new android.view.animation.DecelerateInterpolator(1.4f)).start();}
+        if(!context.getSharedPreferences("vstore_ui",Context.MODE_PRIVATE).getBoolean("reduce_motion",false)&&(h.card.getAlpha()<0.99f||Math.abs(h.card.getTranslationY())>dp(1))){h.card.animate().cancel();h.card.setAlpha(0f);h.card.setTranslationY(dp(12));h.card.animate().alpha(1f).translationY(0f).setDuration(260).setInterpolator(new android.view.animation.DecelerateInterpolator(1.4f)).start();}
     }
     private void animatePress(View v){if(context.getSharedPreferences("vstore_ui",Context.MODE_PRIVATE).getBoolean("haptics",true))v.performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY);if(!context.getSharedPreferences("vstore_ui",Context.MODE_PRIVATE).getBoolean("reduce_motion",false)){v.animate().cancel();v.setScaleX(.97f);v.setScaleY(.97f);v.animate().scaleX(1f).scaleY(1f).setDuration(180).setInterpolator(new android.view.animation.OvershootInterpolator(1.3f)).start();}}
     private TextView label(String s,int size,int color){TextView t=new TextView(context);t.setText(s);t.setTextSize(size);t.setTextColor(color);return t;}
