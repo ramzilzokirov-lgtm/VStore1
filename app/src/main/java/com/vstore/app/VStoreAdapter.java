@@ -10,6 +10,8 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.ProgressBar;
 import java.util.Map;
+import java.util.Set;
+import java.util.HashSet;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.DiffUtil;
 import androidx.recyclerview.widget.ListAdapter;
@@ -22,6 +24,7 @@ public final class VStoreAdapter extends ListAdapter<VStoreAppItem,VStoreAdapter
     private final Context context;
     private final ItemAction onDetails, onDownload;
     private final Map<String,Integer> progress;
+    private final Set<String> entranceAnimatedIds=java.util.Collections.synchronizedSet(new HashSet<String>());
     private final int textColor=0xfff6f0f8, mutedColor=0xffb9afc0, accent=0xff7c4dff;
 
     public VStoreAdapter(Context context, ItemAction onDetails, ItemAction onDownload, Map<String,Integer> progress) {
@@ -39,6 +42,7 @@ public final class VStoreAdapter extends ListAdapter<VStoreAppItem,VStoreAdapter
         boolean compact=context.getSharedPreferences("vstore_ui",Context.MODE_PRIVATE).getBoolean("compact",false);
         card.setRadius(dp(24)); card.setCardElevation(glass?dp(2):0); card.setStrokeWidth(glass?dp(1):0);
         card.setStrokeColor(0x33ffffff); card.setCardBackgroundColor(glass?0x1affffff:0xff201d2a);
+        if(!context.getSharedPreferences("vstore_ui",Context.MODE_PRIVATE).getBoolean("reduce_motion",false)){card.setAlpha(0f);card.setTranslationY(dp(22));card.setScaleX(.975f);card.setScaleY(.975f);}
         RecyclerView.LayoutParams cp=new RecyclerView.LayoutParams(-1,-2);
         cp.setMargins(0,dp(7),0,dp(7)); card.setLayoutParams(cp);
         LinearLayout body=new LinearLayout(context); body.setOrientation(LinearLayout.VERTICAL); body.setPadding(dp(15),dp(13),dp(15),dp(13)); card.addView(body);
@@ -77,7 +81,17 @@ public final class VStoreAdapter extends ListAdapter<VStoreAppItem,VStoreAdapter
         h.action.setTextColor(ready?0xffffffff:0xffc7c2cc);
         h.card.setOnClickListener(v->{animatePress(v);onDetails.onAction(item);});
         h.action.setOnClickListener(v->{if(ready){animatePress(v);onDownload.onAction(item);}});
-        if(!context.getSharedPreferences("vstore_ui",Context.MODE_PRIVATE).getBoolean("reduce_motion",false)&&(h.card.getAlpha()<0.99f||Math.abs(h.card.getTranslationY())>dp(1))){h.card.animate().cancel();h.card.setAlpha(0f);h.card.setTranslationY(dp(12));h.card.animate().alpha(1f).translationY(0f).setDuration(260).setInterpolator(new android.view.animation.DecelerateInterpolator(1.4f)).start();}
+        boolean reduce=context.getSharedPreferences("vstore_ui",Context.MODE_PRIVATE).getBoolean("reduce_motion",false);
+        if(!reduce&&entranceAnimatedIds.add(item.id)){
+            int positionDelay=Math.min(360,Math.max(0,position)*70);
+            h.card.animate().cancel();
+            h.card.setAlpha(0f);h.card.setTranslationY(dp(22));h.card.setScaleX(.975f);h.card.setScaleY(.975f);
+            h.card.animate().alpha(1f).translationY(0f).scaleX(1f).scaleY(1f)
+                .setStartDelay(positionDelay).setDuration(420)
+                .setInterpolator(new android.view.animation.PathInterpolator(.16f,1f,.3f,1f)).start();
+        } else if(reduce) {
+            h.card.animate().cancel();h.card.setAlpha(1f);h.card.setTranslationY(0f);h.card.setScaleX(1f);h.card.setScaleY(1f);
+        }
     }
     private void animatePress(View v){if(context.getSharedPreferences("vstore_ui",Context.MODE_PRIVATE).getBoolean("haptics",true))v.performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY);if(!context.getSharedPreferences("vstore_ui",Context.MODE_PRIVATE).getBoolean("reduce_motion",false)){v.animate().cancel();v.setScaleX(.97f);v.setScaleY(.97f);v.animate().scaleX(1f).scaleY(1f).setDuration(180).setInterpolator(new android.view.animation.OvershootInterpolator(1.3f)).start();}}
     private TextView label(String s,int size,int color){TextView t=new TextView(context);t.setText(s);t.setTextSize(size);t.setTextColor(color);return t;}
