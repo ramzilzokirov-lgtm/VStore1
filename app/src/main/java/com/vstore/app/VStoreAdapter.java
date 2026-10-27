@@ -25,7 +25,7 @@ public final class VStoreAdapter extends ListAdapter<VStoreAppItem,VStoreAdapter
     private final ItemAction onDetails, onDownload;
     private final Map<String,Integer> progress;
     private final Set<String> entranceAnimatedIds=java.util.Collections.synchronizedSet(new HashSet<String>());
-    private final int textColor=0xfff6f0f8, mutedColor=0xffb9afc0, accent=0xff7c4dff;
+    private final int textColor=0xfff4f0e6, mutedColor=0xffc6c0b2, accent=0xffd6b45c;
 
     public VStoreAdapter(Context context, ItemAction onDetails, ItemAction onDownload, Map<String,Integer> progress) {
         super(DIFF);
@@ -41,21 +41,21 @@ public final class VStoreAdapter extends ListAdapter<VStoreAppItem,VStoreAdapter
         boolean glass=context.getSharedPreferences("vstore_ui",Context.MODE_PRIVATE).getBoolean("glass",true);
         boolean compact=context.getSharedPreferences("vstore_ui",Context.MODE_PRIVATE).getBoolean("compact",false);
         card.setRadius(dp(24)); card.setCardElevation(glass?dp(2):0); card.setStrokeWidth(glass?dp(1):0);
-        card.setStrokeColor(0x33ffffff); card.setCardBackgroundColor(glass?0x1affffff:0xff201d2a);
+        card.setStrokeColor(0x33d6b45c); card.setCardBackgroundColor(glass?0x1affffff:0xff1b1b1e);
         if(!context.getSharedPreferences("vstore_ui",Context.MODE_PRIVATE).getBoolean("reduce_motion",false)){card.setAlpha(0f);card.setTranslationY(dp(22));card.setScaleX(.975f);card.setScaleY(.975f);}
         RecyclerView.LayoutParams cp=new RecyclerView.LayoutParams(-1,-2);
         cp.setMargins(0,dp(7),0,dp(7)); card.setLayoutParams(cp);
         LinearLayout body=new LinearLayout(context); body.setOrientation(LinearLayout.VERTICAL); body.setPadding(dp(15),dp(13),dp(15),dp(13)); card.addView(body);
         LinearLayout row=new LinearLayout(context); row.setGravity(Gravity.CENTER_VERTICAL); body.addView(row);
         ImageView icon=new ImageView(context); icon.setImageResource(android.R.drawable.sym_def_app_icon);
-        GradientDrawable iconBg=new GradientDrawable();iconBg.setColor(0x26ffffff);iconBg.setCornerRadius(dp(16));icon.setBackground(iconBg);icon.setClipToOutline(true);
+        GradientDrawable iconBg=new GradientDrawable();iconBg.setColor(0x26d6b45c);iconBg.setCornerRadius(dp(16));icon.setBackground(iconBg);icon.setClipToOutline(true);
         row.addView(icon,new LinearLayout.LayoutParams(dp(56),dp(56)));
         LinearLayout col=new LinearLayout(context);col.setOrientation(LinearLayout.VERTICAL);col.setPadding(dp(12),0,0,0);
         row.addView(col,new LinearLayout.LayoutParams(0,-2,1));
         LinearLayout titleRow=new LinearLayout(context);titleRow.setGravity(Gravity.CENTER_VERTICAL);col.addView(titleRow);
         TextView title=label("",17,textColor);title.setTypeface(null,1);titleRow.addView(title,new LinearLayout.LayoutParams(0,-2,1));
         TextView version=label("",11,textColor);version.setPadding(dp(8),dp(3),dp(8),dp(3));
-        GradientDrawable chip=new GradientDrawable();chip.setColor(0x26ffffff);chip.setCornerRadius(dp(12));version.setBackground(chip);titleRow.addView(version);
+        GradientDrawable chip=new GradientDrawable();chip.setColor(0x26d6b45c);chip.setCornerRadius(dp(12));version.setBackground(chip);titleRow.addView(version);
         TextView description=label("",13,textColor);description.setMaxLines(2);description.setEllipsize(android.text.TextUtils.TruncateAt.END);
         LinearLayout.LayoutParams descParams=new LinearLayout.LayoutParams(-1,-2);descParams.topMargin=dp(compact?5:9);body.addView(description,descParams);
         if(compact){icon.getLayoutParams().width=dp(44);icon.getLayoutParams().height=dp(44);description.setMaxLines(1);}
@@ -89,6 +89,7 @@ public final class VStoreAdapter extends ListAdapter<VStoreAppItem,VStoreAdapter
             h.card.animate().alpha(1f).translationY(0f).scaleX(1f).scaleY(1f)
                 .setStartDelay(positionDelay).setDuration(420)
                 .setInterpolator(new android.view.animation.PathInterpolator(.16f,1f,.3f,1f)).start();
+            h.card.setElevation(dp(1));
         } else if(reduce) {
             h.card.animate().cancel();h.card.setAlpha(1f);h.card.setTranslationY(0f);h.card.setScaleX(1f);h.card.setScaleY(1f);
         }
