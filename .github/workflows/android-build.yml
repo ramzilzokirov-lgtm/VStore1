@@ -34,13 +34,35 @@ jobs:
           script: |
             set -eu
             mkdir -p artifacts
+            mkdir -p artifacts
+            adb start-server
+            adb wait-for-device
+            for attempt in $(seq 1 30); do
+              state="$(adb get-state 2>/dev/null || true)"
+              boot="$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r' || true)"
+              if [ "$state" = "device" ] && [ "$boot" = "1" ]; then break; fi
+              sleep 2
+            done
+            adb devices -l | tee artifacts/adb-devices.txt
+            test "$(adb get-state)" = "device"
             adb install -r app/build/outputs/apk/debug/app-debug.apk
             adb logcat -c
             adb shell am force-stop com.vstore.app || true
             adb shell monkey -p com.vstore.app 1
-            sleep 15
+            sleep 12
             adb logcat -d -v threadtime > artifacts/vstore-startup-logcat.txt
-            if adb shell pidof com.vstore.app >/dev/null 2>&1; then echo "V Store process remained alive for 15 seconds."; else echo "V Store process exited after launch. Logcat saved."; grep -n -A 80 -B 20 -E 'FATAL EXCEPTION|AndroidRuntime|VStoreStartup|Process: com.vstore.app' artifacts/vstore-startup-logcat.txt || true; exit 1; fi
+            if grep -q -E 'FATAL EXCEPTION.*com.vstore.app|Process: com.vstore.app|VStoreStartup.*E ' artifacts/vstore-startup-logcat.txt; then
+              grep -n -A 80 -B 20 -E 'FATAL EXCEPTION|AndroidRuntime|VStoreStartup|Process: com.vstore.app' artifacts/vstore-startup-logcat.txt || true
+              exit 1
+            fi
+            if adb shell pidof com.vstore.app >/dev/null 2>&1; then
+              echo "V Store process remained alive after launch."
+            else
+              echo "V Store process not detected; checking emulator health before classifying startup."
+              adb get-state
+              grep -n -A 80 -B 20 -E 'FATAL EXCEPTION|AndroidRuntime|VStoreStartup|Process: com.vstore.app' artifacts/vstore-startup-logcat.txt || true
+              exit 1
+            fi
       - name: Upload startup diagnostics
         if: always()
         uses: actions/upload-artifact@v4
